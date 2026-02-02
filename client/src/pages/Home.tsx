@@ -89,6 +89,14 @@ export default function Home() {
             <div className="flex gap-4">
               <Button 
                 variant="ghost" 
+                size="sm"
+                onClick={() => setLocation("/admin")}
+                className="text-gray-500 hover:text-amber-600"
+              >
+                管理
+              </Button>
+              <Button 
+                variant="ghost" 
                 onClick={() => setLocation("/chat")}
                 className="gap-2"
               >
