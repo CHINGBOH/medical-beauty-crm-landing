@@ -75,15 +75,15 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50">
       {/* 导航栏 */}
-      <nav className="bg-white/80 backdrop-blur-sm border-b border-pink-100 sticky top-0 z-50">
+      <nav className="bg-white/80 backdrop-blur-sm border-b border-amber-100 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-8 h-8 text-pink-500" />
-              <span className="text-2xl font-bold bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
-                美丽绽放
+            <div className="flex items-center gap-3">
+              <img src="/yanmei-logo.jpg" alt="深圳妍美" className="h-10 w-10 object-contain" />
+              <span className="text-xl font-bold text-amber-800">
+                深圳妍美医疗美容门诊部
               </span>
             </div>
             <div className="flex gap-4">
@@ -96,7 +96,7 @@ export default function Home() {
                 在线咨询
               </Button>
               <Button 
-                className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600"
+                className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700"
                 onClick={() => {
                   document.getElementById("form-section")?.scrollIntoView({ behavior: "smooth" });
                 }}
@@ -113,13 +113,13 @@ export default function Home() {
       <section className="container mx-auto px-4 py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div>
-            <Badge className="mb-4 bg-pink-100 text-pink-600 hover:bg-pink-200">
+            <Badge className="mb-4 bg-amber-100 text-amber-700 hover:bg-amber-200">
               ⭐ 2024 年度推荐项目
             </Badge>
             <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight">
               超皮秒祛斑
               <br />
-              <span className="bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
                 让肌肤重焕光彩
               </span>
             </h1>
@@ -129,15 +129,15 @@ export default function Home() {
             
             <div className="flex flex-wrap gap-4 mb-8">
               <div className="flex items-center gap-2 bg-white px-4 py-3 rounded-full shadow-sm">
-                <Clock className="w-5 h-5 text-pink-500" />
+                <Clock className="w-5 h-5 text-amber-600" />
                 <span className="text-sm font-medium">恢复期 3-5 天</span>
               </div>
               <div className="flex items-center gap-2 bg-white px-4 py-3 rounded-full shadow-sm">
-                <Shield className="w-5 h-5 text-pink-500" />
+                <Shield className="w-5 h-5 text-amber-600" />
                 <span className="text-sm font-medium">安全无创</span>
               </div>
               <div className="flex items-center gap-2 bg-white px-4 py-3 rounded-full shadow-sm">
-                <Heart className="w-5 h-5 text-pink-500" />
+                <Heart className="w-5 h-5 text-amber-600" />
                 <span className="text-sm font-medium">效果持久</span>
               </div>
             </div>
@@ -145,7 +145,7 @@ export default function Home() {
             <div className="flex gap-4">
               <Button 
                 size="lg"
-                className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-lg px-8"
+                className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-lg px-8"
                 onClick={() => {
                   document.getElementById("form-section")?.scrollIntoView({ behavior: "smooth" });
                 }}
@@ -156,7 +156,7 @@ export default function Home() {
                 size="lg" 
                 variant="outline"
                 onClick={() => setLocation("/chat")}
-                className="text-lg px-8 border-pink-300 hover:bg-pink-50"
+                className="text-lg px-8 border-amber-300 hover:bg-amber-50"
               >
                 <MessageCircle className="w-5 h-5 mr-2" />
                 咨询顾问
@@ -165,17 +165,17 @@ export default function Home() {
           </div>
 
           <div className="relative">
-            <div className="aspect-square bg-gradient-to-br from-pink-200 to-purple-200 rounded-3xl overflow-hidden shadow-2xl">
+            <div className="aspect-square bg-gradient-to-br from-amber-200 to-orange-200 rounded-3xl overflow-hidden shadow-2xl">
               <div className="w-full h-full flex items-center justify-center text-gray-400">
                 <div className="text-center">
-                  <Sparkles className="w-24 h-24 mx-auto mb-4 text-pink-400" />
+                  <Sparkles className="w-24 h-24 mx-auto mb-4 text-amber-500" />
                   <p className="text-lg">超皮秒祛斑效果展示</p>
                 </div>
               </div>
             </div>
             {/* 装饰元素 */}
-            <div className="absolute -top-6 -right-6 w-32 h-32 bg-pink-300 rounded-full opacity-20 blur-3xl"></div>
-            <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-purple-300 rounded-full opacity-20 blur-3xl"></div>
+            <div className="absolute -top-6 -right-6 w-32 h-32 bg-amber-300 rounded-full opacity-20 blur-3xl"></div>
+            <div className="absolute -bottom-6 -left-6 w-40 h-40 bg-orange-300 rounded-full opacity-20 blur-3xl"></div>
           </div>
         </div>
       </section>
@@ -191,27 +191,27 @@ export default function Home() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {[
               {
-                icon: <Sparkles className="w-12 h-12 text-pink-500" />,
+                icon: <Sparkles className="w-12 h-12 text-amber-600" />,
                 title: "精准祛斑",
                 desc: "超短脉冲精准击碎色素，不伤周围组织"
               },
               {
-                icon: <Clock className="w-12 h-12 text-pink-500" />,
+                icon: <Clock className="w-12 h-12 text-amber-600" />,
                 title: "恢复快速",
                 desc: "3-5天恢复期，不影响正常工作生活"
               },
               {
-                icon: <Shield className="w-12 h-12 text-pink-500" />,
+                icon: <Shield className="w-12 h-12 text-amber-600" />,
                 title: "安全可靠",
                 desc: "FDA认证设备，专业医师操作"
               },
               {
-                icon: <Heart className="w-12 h-12 text-pink-500" />,
+                icon: <Heart className="w-12 h-12 text-amber-600" />,
                 title: "效果持久",
                 desc: "2-3次治疗，效果可维持数年"
               }
             ].map((item, index) => (
-              <Card key={index} className="border-pink-100 hover:shadow-lg transition-shadow">
+              <Card key={index} className="border-amber-100 hover:shadow-lg transition-shadow">
                 <CardContent className="pt-8 text-center">
                   <div className="mb-4 flex justify-center">{item.icon}</div>
                   <h3 className="text-xl font-semibold mb-2">{item.title}</h3>
@@ -241,7 +241,7 @@ export default function Home() {
               "追求安全有效的祛斑方案"
             ].map((item, index) => (
               <div key={index} className="flex items-start gap-3 bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-                <CheckCircle2 className="w-6 h-6 text-pink-500 flex-shrink-0 mt-1" />
+                <CheckCircle2 className="w-6 h-6 text-amber-600 flex-shrink-0 mt-1" />
                 <span className="text-gray-700">{item}</span>
               </div>
             ))}
@@ -250,7 +250,7 @@ export default function Home() {
       </section>
 
       {/* 客户评价 */}
-      <section className="bg-gradient-to-br from-pink-50 to-purple-50 py-20">
+      <section className="bg-gradient-to-br from-amber-50 to-orange-50 py-20">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold mb-4">客户真实评价</h2>
@@ -278,7 +278,7 @@ export default function Home() {
                 content: "咨询顾问很耐心，解答了我所有疑问。治疗过程不疼，就像橡皮筋弹一下。效果超出预期，强烈推荐！"
               }
             ].map((review, index) => (
-              <Card key={index} className="bg-white border-pink-100">
+              <Card key={index} className="bg-white border-amber-100">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-1 mb-4">
                     {Array.from({ length: review.rating }).map((_, i) => (
@@ -287,7 +287,7 @@ export default function Home() {
                   </div>
                   <p className="text-gray-700 mb-4 leading-relaxed">{review.content}</p>
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-pink-300 to-purple-300 rounded-full"></div>
+                    <div className="w-12 h-12 bg-gradient-to-br from-amber-300 to-orange-300 rounded-full"></div>
                     <div>
                       <p className="font-semibold">{review.name}</p>
                       <p className="text-sm text-gray-500">{review.age}</p>
@@ -311,7 +311,7 @@ export default function Home() {
               </p>
             </div>
 
-            <Card className="border-pink-100 shadow-xl">
+            <Card className="border-amber-100 shadow-xl">
               <CardContent className="pt-8">
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid md:grid-cols-2 gap-6">
@@ -386,7 +386,7 @@ export default function Home() {
                   <Button
                     type="submit"
                     size="lg"
-                    className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-lg h-14"
+                    className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-lg h-14"
                     disabled={submitLead.isPending}
                   >
                     {submitLead.isPending ? "提交中..." : "立即预约"}
@@ -408,11 +408,11 @@ export default function Home() {
           <div className="grid md:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="w-6 h-6 text-pink-400" />
-                <span className="text-xl font-bold">美丽绽放</span>
+                <img src="/yanmei-logo.jpg" alt="深圳妍美" className="h-8 w-8 object-contain" />
+                <span className="text-xl font-bold">深圳妍美</span>
               </div>
               <p className="text-gray-400">
-                专业医美机构，致力于为每一位客户提供安全、有效、个性化的美丽解决方案。
+                深圳妍美医疗美容门诊部，专注医美领域，为每一位客户提供安全、专业、个性化的美丽解决方案。
               </p>
             </div>
             <div>
@@ -438,7 +438,7 @@ export default function Home() {
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400 text-sm">
-            <p>© 2024 美丽绽放医美. All rights reserved.</p>
+            <p>© 2024 深圳妍美医疗美容门诊部. All rights reserved.</p>
           </div>
         </div>
       </footer>
