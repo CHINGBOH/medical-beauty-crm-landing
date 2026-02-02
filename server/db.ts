@@ -1,6 +1,17 @@
-import { eq } from "drizzle-orm";
+import { eq, desc, and } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { 
+  InsertUser, 
+  users, 
+  knowledgeBase, 
+  InsertKnowledgeBase,
+  conversations,
+  InsertConversation,
+  messages,
+  InsertMessage,
+  leads,
+  InsertLead
+} from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +100,124 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// ==================== 知识库相关 ====================
+
+export async function createKnowledge(data: InsertKnowledgeBase) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.insert(knowledgeBase).values(data);
+}
+
+export async function getActiveKnowledge(category?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const conditions = [eq(knowledgeBase.isActive, 1)];
+  if (category) {
+    conditions.push(eq(knowledgeBase.category, category));
+  }
+  
+  return db.select().from(knowledgeBase)
+    .where(and(...conditions))
+    .orderBy(desc(knowledgeBase.usedCount));
+}
+
+export async function incrementKnowledgeUsage(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const knowledge = await db.select().from(knowledgeBase).where(eq(knowledgeBase.id, id)).limit(1);
+  if (knowledge[0]) {
+    await db.update(knowledgeBase)
+      .set({ usedCount: knowledge[0].usedCount + 1 })
+      .where(eq(knowledgeBase.id, id));
+  }
+}
+
+// ==================== 对话相关 ====================
+
+export async function createConversation(data: InsertConversation) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.insert(conversations).values(data);
+}
+
+export async function getConversationBySessionId(sessionId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(conversations)
+    .where(eq(conversations.sessionId, sessionId))
+    .limit(1);
+  
+  return result[0];
+}
+
+export async function updateConversation(sessionId: string, data: Partial<InsertConversation>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(conversations)
+    .set(data)
+    .where(eq(conversations.sessionId, sessionId));
+}
+
+// ==================== 消息相关 ====================
+
+export async function createMessage(data: InsertMessage) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.insert(messages).values(data);
+}
+
+export async function getMessagesByConversationId(conversationId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return db.select().from(messages)
+    .where(eq(messages.conversationId, conversationId))
+    .orderBy(messages.createdAt);
+}
+
+// ==================== 线索相关 ====================
+
+export async function createLead(data: InsertLead) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.insert(leads).values(data);
+  return result;
+}
+
+export async function getLeadByPhone(phone: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(leads)
+    .where(eq(leads.phone, phone))
+    .limit(1);
+  
+  return result[0];
+}
+
+export async function updateLeadAirtableId(id: number, airtableId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(leads)
+    .set({ 
+      airtableId, 
+      syncedAt: new Date() 
+    })
+    .where(eq(leads.id, id));
+}
+
+export async function getAllLeads() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return db.select().from(leads).orderBy(desc(leads.createdAt));
+}
