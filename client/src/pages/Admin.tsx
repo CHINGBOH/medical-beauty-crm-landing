@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,10 +18,12 @@ export default function Admin() {
   const getConfig = trpc.admin.getAirtableConfig.useQuery();
 
   // 加载现有配置
-  if (getConfig.data && !airtableToken && !airtableBaseId) {
-    setAirtableToken(getConfig.data.token || "");
-    setAirtableBaseId(getConfig.data.baseId || "");
-  }
+  useEffect(() => {
+    if (getConfig.data && !airtableToken && !airtableBaseId) {
+      setAirtableToken(getConfig.data.token || "");
+      setAirtableBaseId(getConfig.data.baseId || "");
+    }
+  }, [getConfig.data]);
 
   const handleSave = async () => {
     if (!airtableToken || !airtableBaseId) {
