@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,30 @@ import {
 } from "lucide-react";
 
 export default function Home() {
+  // SEO 优化
+  useEffect(() => {
+    // 设置页面标题（30-60字符）
+    document.title = "深圳妍美医美门诊部-超皮秒祛斑|水光针|热玛吉|专业医美机构";
+    
+    // 设置描述信息（50-160字符）
+    let metaDescription = document.querySelector('meta[name="description"]');
+    if (!metaDescription) {
+      metaDescription = document.createElement('meta');
+      metaDescription.setAttribute('name', 'description');
+      document.head.appendChild(metaDescription);
+    }
+    metaDescription.setAttribute('content', '深圳妍美医疗美容门诊部提供专业的超皮秒祛斑、水光针、热玛吉等医美项目。采用先进技术，专业医生团队，为您打造完美肌肤。免费预约咨询，在线 AI 客服 24 小时服务。');
+    
+    // 设置关键词
+    let metaKeywords = document.querySelector('meta[name="keywords"]');
+    if (!metaKeywords) {
+      metaKeywords = document.createElement('meta');
+      metaKeywords.setAttribute('name', 'keywords');
+      document.head.appendChild(metaKeywords);
+    }
+    metaKeywords.setAttribute('content', '深圳医美,妍美医美,超皮秒祛斑,水光针,热玛吉,医美整形,皮肤美容,抽脂塑形,医美门诊部,深圳美容院');
+  }, []);
+
   const [, setLocation] = useLocation();
   const [formData, setFormData] = useState({
     name: "",
