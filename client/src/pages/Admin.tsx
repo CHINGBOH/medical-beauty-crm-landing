@@ -5,9 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Settings, Database, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Settings, Database, CheckCircle2, XCircle, Loader2, BarChart3, ArrowLeft } from "lucide-react";
+import { useLocation } from "wouter";
 
 export default function Admin() {
+  const [, setLocation] = useLocation();
   const [airtableToken, setAirtableToken] = useState("");
   const [airtableBaseId, setAirtableBaseId] = useState("");
   const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
@@ -101,11 +103,32 @@ export default function Admin() {
         <div className="max-w-4xl mx-auto">
           {/* 头部 */}
           <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <Settings className="w-8 h-8 text-amber-600" />
-              <h1 className="text-3xl font-bold text-gray-800">系统管理</h1>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <Settings className="w-8 h-8 text-amber-600" />
+                  <h1 className="text-3xl font-bold text-gray-800">系统管理</h1>
+                </div>
+                <p className="text-gray-600">配置和管理系统集成</p>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setLocation("/")}
+                  className="border-amber-200 hover:bg-amber-50"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  返回首页
+                </Button>
+                <Button
+                  onClick={() => setLocation("/analytics")}
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  <BarChart3 className="w-4 h-4 mr-2" />
+                  数据分析
+                </Button>
+              </div>
             </div>
-            <p className="text-gray-600">配置和管理系统集成</p>
           </div>
 
           {/* Airtable 配置卡片 */}

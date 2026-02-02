@@ -21,15 +21,18 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users } from "lucide-react";
+import { Settings, BarChart3, MessageSquare, FileText, Users, LogOut, PanelLeft } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
+  { icon: Settings, label: "系统配置", path: "/dashboard/config" },
+  { icon: BarChart3, label: "数据分析", path: "/dashboard/analytics" },
+  { icon: MessageSquare, label: "对话管理", path: "/dashboard/conversations" },
+  { icon: FileText, label: "内容管理", path: "/dashboard/content" },
+  { icon: Users, label: "客户管理", path: "/dashboard/customers" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -171,7 +174,7 @@ function DashboardLayoutContent({
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="font-semibold tracking-tight truncate">
-                    Navigation
+                    妍美医美 CRM
                   </span>
                 </div>
               ) : null}

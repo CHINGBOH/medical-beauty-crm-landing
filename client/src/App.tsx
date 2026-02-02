@@ -8,6 +8,11 @@ import Home from "./pages/Home";
 import Chat from "./pages/Chat";
 import Admin from "./pages/Admin";
 import Analytics from "./pages/Analytics";
+import DashboardConfig from "./pages/DashboardConfig";
+import DashboardAnalytics from "./pages/DashboardAnalytics";
+import DashboardConversations from "./pages/DashboardConversations";
+import DashboardContent from "./pages/DashboardContent";
+import DashboardCustomers from "./pages/DashboardCustomers";
 
 function Router() {
   return (
@@ -16,6 +21,11 @@ function Router() {
       <Route path={"/chat"} component={Chat} />
       <Route path={"/admin"} component={Admin} />
       <Route path={"/analytics"} component={Analytics} />
+      <Route path={"/dashboard/config"} component={DashboardConfig} />
+      <Route path={"/dashboard/analytics"} component={DashboardAnalytics} />
+      <Route path={"/dashboard/conversations"} component={DashboardConversations} />
+      <Route path={"/dashboard/content"} component={DashboardContent} />
+      <Route path={"/dashboard/customers"} component={DashboardCustomers} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

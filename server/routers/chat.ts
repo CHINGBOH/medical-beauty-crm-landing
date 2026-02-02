@@ -5,6 +5,7 @@ import {
   createConversation, 
   getConversationBySessionId, 
   updateConversation,
+  getAllConversations,
   createMessage,
   getMessagesByConversationId,
   getActiveKnowledge,
@@ -151,6 +152,24 @@ export const chatRouter = router({
           createdAt: m.createdAt,
         })),
       };
+    }),
+
+  /**
+   * 获取所有对话
+   */
+  getConversations: publicProcedure.query(async () => {
+    const conversations = await getAllConversations();
+    return conversations;
+  }),
+
+  /**
+   * 获取对话消息
+   */
+  getMessages: publicProcedure
+    .input(z.object({ conversationId: z.number() }))
+    .query(async ({ input }) => {
+      const messages = await getMessagesByConversationId(input.conversationId);
+      return messages;
     }),
 
   /**

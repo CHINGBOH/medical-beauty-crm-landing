@@ -164,6 +164,13 @@ export async function updateConversation(sessionId: string, data: Partial<Insert
     .where(eq(conversations.sessionId, sessionId));
 }
 
+export async function getAllConversations() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return db.select().from(conversations).orderBy(desc(conversations.createdAt));
+}
+
 // ==================== 消息相关 ====================
 
 export async function createMessage(data: InsertMessage) {
