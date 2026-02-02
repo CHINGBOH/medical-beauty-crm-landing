@@ -138,6 +138,17 @@ export default function Chat() {
             </p>
           </div>
 
+          {/* 留资按钮 */}
+          <div className="mb-4 text-center">
+            <Button
+              size="lg"
+              onClick={() => setShowLeadForm(true)}
+              className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-8 py-4 text-base rounded-full shadow-lg hover:shadow-xl transition-all"
+            >
+              💝 预约面诊 / 留下联系方式
+            </Button>
+          </div>
+
           {/* 聊天界面 */}
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <AIChatBox
@@ -147,17 +158,6 @@ export default function Chat() {
               placeholder="输入您的问题，比如：我想了解超皮秒祛斑..."
               height="600px"
             />
-          </div>
-
-          {/* 留资按钮 */}
-          <div className="mt-6 text-center">
-            <Button
-              size="lg"
-              onClick={() => setShowLeadForm(true)}
-              className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-8 py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
-            >
-              💝 预约面诊 / 留下联系方式
-            </Button>
           </div>
         </div>
       </div>
