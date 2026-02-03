@@ -209,7 +209,9 @@ export class QueueStatusWebSocketService extends EventEmitter {
     
     try {
       let status;
-      if (queueName) {
+      if (!coreQueueService.isReady()) {
+        status = queueName ? null : {};
+      } else if (queueName) {
         status = await coreQueueService.getQueueStatus(queueName);
       } else {
         status = await coreQueueService.getAllQueueStatus();
@@ -285,7 +287,9 @@ export class QueueStatusWebSocketService extends EventEmitter {
   private startBroadcasting(): void {
     this.broadcastInterval = setInterval(async () => {
       try {
-        const status = await coreQueueService.getAllQueueStatus();
+        const status = coreQueueService.isReady()
+          ? await coreQueueService.getAllQueueStatus()
+          : {};
         
         // 广播给所有订阅了相关队列的客户端
         for (const [clientId, client] of this.clients) {

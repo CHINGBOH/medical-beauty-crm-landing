@@ -25,18 +25,10 @@ export const adminAiRouter = router({
         messages: [
           {
             role: "system",
-
-
-
-   - type: 类型（customer_inquiry客户问询、internal_management内部管理）
-
-{
-  "queryType": "客户查询 | 对话查询 | 统计查询 | 知识库查询",
-  "tables": ["需要查询的表"],
-  "conditions": ["查询条件描述"],
-  "aggregations": ["聚合统计描述"],
-  "timeRange": "时间范围描述"
-}`,
+            content:
+              "你是一个医美 CRM 系统的数据分析助手。请先输出查询计划 JSON，" +
+              "只包含 queryType、tables、conditions、aggregations、timeRange 字段，" +
+              "不要输出多余文字。",
           },
           {
             role: "user",

@@ -1,9 +1,9 @@
-import cron from 'node-cron';
 import axios from 'axios';
 
 export class TriggerService {
   private triggers: any[] = [];
   private weatherApiKey: string;
+  private timers: NodeJS.Timeout[] = [];
 
   constructor(weatherApiKey?: string) {
     this.weatherApiKey = weatherApiKey || process.env.QWEATHER_API_KEY || '';
@@ -20,15 +20,17 @@ export class TriggerService {
 
   // 设置定时任务
   private setupCronJobs() {
-    // 每分钟检查时间触发器
-    cron.schedule('* * * * *', () => {
-      this.checkTimeTriggers();
-    });
+    this.timers.push(
+      setInterval(() => {
+        void this.checkTimeTriggers();
+      }, 60 * 1000)
+    );
 
-    // 每30分钟检查天气
-    cron.schedule('*/30 * * * *', () => {
-      this.checkWeatherTriggers();
-    });
+    this.timers.push(
+      setInterval(() => {
+        void this.checkWeatherTriggers();
+      }, 30 * 60 * 1000)
+    );
   }
 
   // 检查时间触发器
@@ -190,122 +192,3 @@ export class TriggerService {
     // 分配顾问
   }
 }
-docker-compose.yml
-
-yaml
-version: '3.8'
-
-services:
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
-      MYSQL_DATABASE: medbeauty
-    volumes:
-      - mysql_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-
-  backend:
-    build: ./backend
-    ports:
-      - "3001:3001"
-    environment:
-      DATABASE_URL: mysql://root:${DB_PASSWORD}@mysql:3306/medbeauty
-      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
-      QWEN_API_KEY: ${QWEN_API_KEY}
-      AIRTABLE_API_KEY: ${AIRTABLE_API_KEY}
-      JWT_SECRET: ${JWT_SECRET}
-    depends_on:
-
-  frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
-    environment:
-      VITE_API_URL: http://localhost:3001
-    depends_on:
-
-volumes:
-  mysql_data:
-backend/Dockerfile
-
-dockerfile
-FROM node:18-alpine
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci --only=production
-
-COPY . .
-
-EXPOSE 3001
-
-CMD ["node", "dist/index.js"]
-frontend/Dockerfile
-
-dockerfile
-FROM node:18-alpine as builder
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci
-
-COPY . .
-RUN npm run build
-
-FROM nginx:alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/nginx.conf
-
-EXPOSE 3000
-
-CMD ["nginx", "-g", "daemon off;"]
-.env.example
-
-env
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=medbeauty
-
-DEEPSEEK_API_KEY=your_deepseek_key
-QWEN_API_KEY=your_qwen_key
-
-AIRTABLE_API_KEY=your_airtable_key
-AIRTABLE_BASE_ID=your_base_id
-WEATHER_API_KEY=your_weather_key
-WECHAT_CORP_ID=your_corp_id
-WECHAT_CORP_SECRET=your_corp_secret
-
-JWT_SECRET=your_jwt_secret
-JWT_EXPIRES_IN=7d
-
-PORT=3001
-FRONTEND_URL=http://localhost:3000
-NODE_ENV=production
-bash
-git clone <repository-url>
-cd med-beauty-crm
-
-cd backend && npm install
-cd ../frontend && npm install
-
-mysql -u root -p < database/init.sql
-
-cp .env.example .env
-bash
-cd backend
-npm run dev
-
-cd frontend
-npm run dev
-
-# 前端：http://localhost:3000
-# 后端API：http://localhost:3001
-# API文档：http://localhost:3001/api-docs
-访问管理后台：http://localhost:3000/dashboard
-

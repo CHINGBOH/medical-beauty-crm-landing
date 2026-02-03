@@ -25,6 +25,11 @@ export class BusinessQueueService {
   /**
    */
   async initialize(): Promise<void> {
+    if (!coreQueueService.isReady()) {
+      logger.warn('核心队列未就绪，跳过业务队列处理器初始化。');
+      return;
+    }
+
     // 1. AI内容生成队列
     await coreQueueService.registerWorker(
       'ai-content-generation',
