@@ -1,6 +1,4 @@
 /**
- * Airtable 表结构自动创建脚本
- * 在用户的 Base 中自动创建医美 CRM 需要的所有表
  */
 
 export interface AirtableConfig {
@@ -9,7 +7,6 @@ export interface AirtableConfig {
 }
 
 /**
- * 创建线索池表
  */
 export async function createLeadsTable(config: AirtableConfig) {
   const response = await fetch(
@@ -141,7 +138,6 @@ export async function createLeadsTable(config: AirtableConfig) {
 }
 
 /**
- * 检查表是否已存在
  */
 export async function checkTableExists(
   config: AirtableConfig,
@@ -165,7 +161,6 @@ export async function checkTableExists(
 }
 
 /**
- * 自动设置 Airtable CRM 表结构
  */
 export async function setupAirtableCRM(config: AirtableConfig) {
   const results = {

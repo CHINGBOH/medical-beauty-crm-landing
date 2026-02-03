@@ -11,7 +11,6 @@ import {
 
 export const knowledgeRouter = router({
   /**
-   * 获取所有知识库（支持按类型筛选）
    */
   getAll: protectedProcedure
     .input(
@@ -25,7 +24,6 @@ export const knowledgeRouter = router({
     }),
 
   /**
-   * 获取单个知识库详情
    */
   getById: protectedProcedure
     .input(z.object({ id: z.number() }))
@@ -38,7 +36,6 @@ export const knowledgeRouter = router({
     }),
 
   /**
-   * 创建知识库
    */
   create: protectedProcedure
     .input(
@@ -65,7 +62,6 @@ export const knowledgeRouter = router({
     }),
 
   /**
-   * 更新知识库
    */
   update: protectedProcedure
     .input(
@@ -93,7 +89,6 @@ export const knowledgeRouter = router({
     }),
 
   /**
-   * 删除知识库
    */
   delete: protectedProcedure
     .input(z.object({ id: z.number() }))
@@ -103,7 +98,6 @@ export const knowledgeRouter = router({
     }),
 
   /**
-   * 获取激活的知识库（用于 AI 检索）
    */
   getActive: publicProcedure
     .input(

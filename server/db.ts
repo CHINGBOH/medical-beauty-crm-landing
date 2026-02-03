@@ -280,6 +280,29 @@ export async function getLeadById(id: number) {
   return result[0] || null;
 }
 
+// ==================== 内容相关 ====================
+
+export async function createContentPost(data: any) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const { contentPosts } = await import("../drizzle/schema");
+  const result = await db.insert(contentPosts).values(data);
+  return { id: Number((result as any).insertId) };
+}
+
+export async function getContentPosts(status?: "draft" | "published", limit = 20, offset = 0) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const { contentPosts } = await import("../drizzle/schema");
+  let query = db.select().from(contentPosts);
+  if (status) {
+    query = query.where(eq(contentPosts.status, status)) as any;
+  }
+  return query.orderBy(desc(contentPosts.createdAt)).limit(limit).offset(offset);
+}
+
 
 // ==================== 小红书相关 ====================
 

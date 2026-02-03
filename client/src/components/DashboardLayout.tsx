@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Settings, BarChart3, MessageSquare, FileText, Users, BookOpen, Instagram, Sparkles, PanelLeft, LogOut, Cog, Smartphone } from "lucide-react";
+import { Settings, BarChart3, MessageSquare, FileText, Users, BookOpen, Instagram, Sparkles, PanelLeft, LogOut, Cog, Smartphone, Zap, Activity, Search } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -33,9 +33,12 @@ const menuItems = [
   { icon: BarChart3, label: "数据分析", path: "/dashboard/analytics" },
   { icon: MessageSquare, label: "对话管理", path: "/dashboard/conversations" },
   { icon: BookOpen, label: "知识库管理", path: "/dashboard/knowledge" },
+  { icon: Search, label: "RAG 问答", path: "/dashboard/rag" },
   { icon: FileText, label: "内容管理", path: "/dashboard/content" },
   { icon: Users, label: "客户管理", path: "/dashboard/customers" },
   { icon: Instagram, label: "小红书运营", path: "/dashboard/xiaohongshu" },
+  { icon: Zap, label: "自动化触发", path: "/dashboard/triggers" },
+  { icon: Activity, label: "队列监控", path: "/dashboard/queue" },
   { icon: Smartphone, label: "企业微信", path: "/dashboard/wework" },
 ];
 

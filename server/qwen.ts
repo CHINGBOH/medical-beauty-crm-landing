@@ -24,8 +24,6 @@ export interface QwenResponse {
 }
 
 /**
- * 调用 Qwen API 进行对话
- * 用于后台管理功能：数据分析、客户画像生成、营销建议等
  */
 export async function callQwen(messages: QwenMessage[]): Promise<string> {
   if (!QWEN_API_KEY) {
@@ -65,20 +63,12 @@ export async function callQwen(messages: QwenMessage[]): Promise<string> {
 }
 
 /**
- * 分析线索数据，生成转化率报告
  */
 export async function analyzeLeadsData(leadsData: any[]): Promise<string> {
   const prompt = `你是一个专业的医美行业数据分析师。请分析以下线索数据，生成一份详细的转化率报告。
 
-线索数据（JSON格式）：
 ${JSON.stringify(leadsData, null, 2)}
 
-请分析：
-1. 总线索数量和来源渠道分布
-2. 各渠道的转化率对比
-3. 客户意向项目分布
-4. 预算区间分析
-5. 优化建议（如何提升转化率）
 
 请用专业、清晰的语言输出报告，使用 Markdown 格式。`;
 
@@ -95,7 +85,6 @@ ${JSON.stringify(leadsData, null, 2)}
 }
 
 /**
- * 基于对话历史生成客户画像
  */
 export async function generateCustomerProfile(
   conversationHistory: string,
@@ -103,18 +92,10 @@ export async function generateCustomerProfile(
 ): Promise<string> {
   const prompt = `你是一个专业的医美客户画像分析师。请根据以下信息生成详细的客户画像。
 
-对话历史：
 ${conversationHistory}
 
-客户基本信息：
 ${JSON.stringify(leadInfo, null, 2)}
 
-请生成客户画像，包括：
-1. 客户需求分析（核心痛点、期望效果）
-2. 消费能力评估
-3. 决策风格（理性/感性、冲动/谨慎）
-4. 推荐项目和话术策略
-5. 跟进建议
 
 请用专业、实用的语言输出，使用 Markdown 格式。`;
 
@@ -131,7 +112,6 @@ ${JSON.stringify(leadInfo, null, 2)}
 }
 
 /**
- * 生成营销建议
  */
 export async function generateMarketingSuggestions(
   leadsData: any[],
@@ -139,18 +119,10 @@ export async function generateMarketingSuggestions(
 ): Promise<string> {
   const prompt = `你是一个医美行业营销专家。请根据以下数据生成营销优化建议。
 
-线索数据概览：
 ${JSON.stringify(leadsData.slice(0, 10), null, 2)}
 
-业绩数据：
 ${JSON.stringify(performanceData, null, 2)}
 
-请提供：
-1. 当前营销策略评估
-2. 高价值客户特征分析
-3. 各渠道优化建议
-4. 新的营销活动建议
-5. 话术和内容优化方向
 
 请用实用、可执行的语言输出，使用 Markdown 格式。`;
 

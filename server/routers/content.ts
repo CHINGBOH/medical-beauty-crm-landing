@@ -1,39 +1,19 @@
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { publicProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
-import { getActiveKnowledge } from "../db";
+import { getActiveKnowledge, createContentPost, getContentPosts } from "../db";
 import { generateImage } from "../_core/imageGeneration";
 
 const CONTENT_GENERATION_PROMPT = `你是一位专业的小红书医美内容创作者，擅长撰写吸引人的医美项目推广文案。
 
-**写作风格要求：**
-1. 标题要有吸引力，使用emoji和数字，制造悬念或好奇心
-2. 正文要真实、接地气，像朋友分享经验一样
-3. 多用emoji增加可读性和亲和力
-4. 结构清晰，使用分点、分段
-5. 突出效果、价格、恢复期等关键信息
-6. 加入个人感受和细节描写
-7. 结尾引导互动（欢迎评论、私信等）
-8. 添加相关话题标签
 
-**内容类型：**
-- 项目体验分享（第一人称，真实感受）
-- 效果对比（强调前后变化）
-- 避坑指南（帮助读者做选择）
-- 价格揭秘（透明化价格信息）
-- 医生/机构推荐（建立信任）
 
-**禁止事项：**
-- 不要过度夸张或虚假宣传
-- 不要使用医疗术语过多
-- 不要直接打广告
 - 不要承诺100%效果`;
 
 export const contentRouter = router({
   /**
-   * 生成小红书爽文
    */
-  generate: protectedProcedure
+  generate: publicProcedure
     .input(
       z.object({
         type: z.enum(["project", "case", "price", "guide", "holiday"]),
@@ -158,9 +138,8 @@ export const contentRouter = router({
     }),
 
   /**
-   * 为内容生成配图
    */
-  generateImage: protectedProcedure
+  generateImage: publicProcedure
     .input(
       z.object({
         title: z.string(),
@@ -187,13 +166,8 @@ Title: ${title}
 Style: ${styleMap[style]}
 
 Requirements:
-- Clean, professional medical aesthetics
 - Include subtle medical beauty elements (like skincare products, treatment equipment)
-- Warm, inviting atmosphere
-- High-end, trustworthy visual style
 - Suitable for social media sharing
-- No text or Chinese characters in the image
-- Focus on beauty, health, and confidence
 
 Color palette: Soft pinks, whites, golds, or pastels depending on the style.`;
 
@@ -209,5 +183,41 @@ Color palette: Soft pinks, whites, golds, or pastels depending on the style.`;
         console.error("Image generation failed:", error);
         throw new Error("图片生成失败，请稍后重试");
       }
+    }),
+  /**
+   */
+  saveDraft: publicProcedure
+    .input(
+      z.object({
+        title: z.string(),
+        content: z.string(),
+        tags: z.array(z.string()).optional(),
+        projectType: z.string().optional(),
+        images: z.array(z.string()).optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      return await createContentPost({
+        title: input.title,
+        content: input.content,
+        tags: input.tags ? JSON.stringify(input.tags) : null,
+        projectType: input.projectType || null,
+        images: input.images ? JSON.stringify(input.images) : null,
+        status: "draft",
+      });
+    }),
+
+  /**
+   */
+  list: publicProcedure
+    .input(
+      z.object({
+        status: z.enum(["draft", "published"]).optional(),
+        limit: z.number().default(20),
+        offset: z.number().default(0),
+      })
+    )
+    .query(async ({ input }) => {
+      return await getContentPosts(input.status, input.limit, input.offset);
     }),
 });

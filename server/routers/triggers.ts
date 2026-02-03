@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, publicProcedure } from "../_core/trpc";
 import {
   getAllTriggers,
   getTriggerById,
@@ -13,13 +13,13 @@ import { invokeLLM } from "../_core/llm";
 
 export const triggersRouter = router({
   // 获取所有触发器
-  list: protectedProcedure.query(async () => {
+  list: publicProcedure.query(async () => {
     const triggers = await getAllTriggers();
     return triggers;
   }),
 
   // 获取单个触发器
-  get: protectedProcedure
+  get: publicProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       const trigger = await getTriggerById(input.id);
@@ -27,7 +27,7 @@ export const triggersRouter = router({
     }),
 
   // 创建触发器
-  create: protectedProcedure
+  create: publicProcedure
     .input(
       z.object({
         name: z.string(),
@@ -43,7 +43,7 @@ export const triggersRouter = router({
     }),
 
   // 更新触发器
-  update: protectedProcedure
+  update: publicProcedure
     .input(
       z.object({
         id: z.number(),
@@ -61,7 +61,7 @@ export const triggersRouter = router({
     }),
 
   // 删除触发器
-  delete: protectedProcedure
+  delete: publicProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       await dbDeleteTrigger(input.id);
@@ -69,7 +69,7 @@ export const triggersRouter = router({
     }),
 
   // 手动执行触发器
-  execute: protectedProcedure
+  execute: publicProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       const trigger = await getTriggerById(input.id);
@@ -125,7 +125,7 @@ export const triggersRouter = router({
     }),
 
   // 获取触发器执行历史
-  executions: protectedProcedure
+  executions: publicProcedure
     .input(z.object({ triggerId: z.number() }))
     .query(async ({ input }) => {
       const executions = await getTriggerExecutions(input.triggerId);
@@ -133,7 +133,7 @@ export const triggersRouter = router({
     }),
 
   // 使用 AI 生成触发器条件
-  generateCondition: protectedProcedure
+  generateCondition: publicProcedure
     .input(
       z.object({
         type: z.enum(["time", "behavior", "weather"]),
@@ -146,16 +146,13 @@ export const triggersRouter = router({
 触发器类型：${input.type}
 用户描述：${input.description}
 
-请生成符合以下格式的 JSON 配置：
 
-**时间触发器格式：**
 {
   "type": "time",
   "schedule": "cron表达式或时间描述",
   "target": "目标客户群体"
 }
 
-**行为触发器格式：**
 {
   "type": "behavior",
   "event": "触发事件（如：浏览未咨询、咨询未预约）",
@@ -163,7 +160,6 @@ export const triggersRouter = router({
   "target": "目标客户群体"
 }
 
-**天气触发器格式：**
 {
   "type": "weather",
   "condition": "天气条件（如：晴天、雨天、温度变化）",

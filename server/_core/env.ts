@@ -7,4 +7,6 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? "",
+  ollamaModel: process.env.OLLAMA_MODEL ?? "qwen2.5:latest",
 };

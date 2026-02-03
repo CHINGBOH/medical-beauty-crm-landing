@@ -135,6 +135,23 @@ export type Lead = typeof leads.$inferSelect;
 export type InsertLead = typeof leads.$inferInsert;
 
 /**
+ * 内容发布表 - 存储内容生成与草稿
+ */
+export const contentPosts = mysqlTable("content_posts", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  tags: text("tags"), // JSON 数组
+  projectType: varchar("project_type", { length: 100 }),
+  images: text("images"), // JSON 数组
+  status: mysqlEnum("status", ["draft", "published"]).default("draft").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type ContentPost = typeof contentPosts.$inferSelect;
+export type InsertContentPost = typeof contentPosts.$inferInsert;
+
+/**
  * 触发器表 - 存储自动化营销触发规则
  */
 export const triggers = mysqlTable("triggers", {

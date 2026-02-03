@@ -115,7 +115,6 @@ class SDKServer {
 
   /**
    * Exchange OAuth authorization code for access token
-   * @example
    * const tokenResponse = await sdk.exchangeCodeForToken(code, state);
    */
   async exchangeCodeForToken(
@@ -126,8 +125,6 @@ class SDKServer {
   }
 
   /**
-   * Get user information using access token
-   * @example
    * const userInfo = await sdk.getUserInfo(tokenResponse.accessToken);
    */
   async getUserInfo(accessToken: string): Promise<GetUserInfoResponse> {
@@ -161,7 +158,6 @@ class SDKServer {
 
   /**
    * Create a session token for a Manus user openId
-   * @example
    * const sessionToken = await sdk.createSessionToken(userInfo.openId);
    */
   async createSessionToken(

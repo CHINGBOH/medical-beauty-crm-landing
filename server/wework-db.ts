@@ -3,7 +3,6 @@ import { weworkConfig, weworkContactWay, weworkCustomers, weworkMessages } from 
 import { eq } from "drizzle-orm";
 
 /**
- * 企业微信数据库操作
  */
 
 // ========== 配置管理 ==========

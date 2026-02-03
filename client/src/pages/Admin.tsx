@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Settings, Database, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Settings, Database, CheckCircle2, XCircle, Loader2, Activity } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 
 export default function Admin() {
@@ -19,6 +19,44 @@ export default function Admin() {
   const testConnection = trpc.admin.testAirtableConnection.useMutation();
   const setupTables = trpc.admin.setupAirtableTables.useMutation();
   const getConfig = trpc.admin.getAirtableConfig.useQuery();
+  const queueStatus = trpc.queue.status.useQuery();
+  const [wsQueueStatus, setWsQueueStatus] = useState<Record<string, any>>({});
+  const wsUrl = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    return `${protocol}://${window.location.host}/ws/queue-status`;
+  }, []);
+
+  useEffect(() => {
+    if (!wsUrl) return;
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      ws.send(
+        JSON.stringify({
+          type: "subscribe",
+          data: { queueNames: Object.keys(queueStatus.data || {}) },
+        })
+      );
+      ws.send(JSON.stringify({ type: "get_status", data: {} }));
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === "queue_status" && msg.data?.status) {
+          setWsQueueStatus(msg.data.status);
+        }
+        if (msg.type === "status" && msg.data?.status) {
+          setWsQueueStatus(msg.data.status);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    return () => ws.close();
+  }, [wsUrl, queueStatus.data]);
 
   // 加载现有配置
   useEffect(() => {
@@ -115,6 +153,40 @@ export default function Admin() {
             </div>
             <p className="text-gray-600">配置和管理系统集成</p>
           </div>
+
+          {/* 队列监控卡片 */}
+          <Card className="border-amber-100 shadow-lg mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="w-5 h-5" />
+                队列监控概览
+              </CardTitle>
+              <CardDescription>显示异步任务队列的当前状态</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {queueStatus.isLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  加载中...
+                </div>
+              ) : queueStatus.data ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                  {Object.entries((wsQueueStatus && Object.keys(wsQueueStatus).length > 0
+                    ? wsQueueStatus
+                    : queueStatus.data) as Record<string, any>).map(([name, status]) => (
+                    <div key={name} className="rounded-md border p-3">
+                      <div className="font-medium">{name}</div>
+                      <div className="text-muted-foreground">waiting {status.waiting}</div>
+                      <div className="text-muted-foreground">active {status.active}</div>
+                      <div className="text-muted-foreground">failed {status.failed}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-muted-foreground">暂无队列状态</div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Airtable 配置卡片 */}
           <Card className="border-amber-100 shadow-lg">

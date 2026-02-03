@@ -1,65 +1,28 @@
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/NotFound";
-import { Route, Switch } from "wouter";
-import ErrorBoundary from "./components/ErrorBoundary";
-import { ThemeProvider } from "./contexts/ThemeContext";
-import Home from "./pages/Home";
-import Chat from "./pages/Chat";
-import Admin from "./pages/Admin";
-import Analytics from "./pages/Analytics";
-import DashboardConfig from "./pages/DashboardConfig";
-import DashboardAnalytics from "./pages/DashboardAnalytics";
-import DashboardConversations from "./pages/DashboardConversations";
-import DashboardContent from "./pages/DashboardContent";
-import DashboardCustomers from "./pages/DashboardCustomers";
-import DashboardKnowledge from "./pages/DashboardKnowledge";
-import DashboardXiaohongshu from "./pages/DashboardXiaohongshu";
-import DashboardAI from "./pages/DashboardAI";
-import DashboardWework from "./pages/DashboardWework";
-
-function Router() {
-  return (
-    <Switch>
-      <Route path={"/"} component={Home} />
-      <Route path={"/chat"} component={Chat} />
-      <Route path={"/admin"} component={Admin} />
-      <Route path={"/analytics"} component={Analytics} />
-      <Route path={"/dashboard/admin"} component={Admin} />
-      <Route path={"/dashboard/config"} component={DashboardConfig} />
-      <Route path={"/dashboard/analytics"} component={DashboardAnalytics} />
-      <Route path={"/dashboard/conversations"} component={DashboardConversations} />
-      <Route path={"/dashboard/content"} component={DashboardContent} />
-      <Route path={"/dashboard/customers"} component={DashboardCustomers} />
-      <Route path={"/dashboard/knowledge"} component={DashboardKnowledge} />
-      <Route path={"/dashboard/xiaohongshu"} component={DashboardXiaohongshu} />
-      <Route path={"/dashboard/ai"} component={DashboardAI} />
-      <Route path={"/dashboard/wework"} component={DashboardWework} />
-      <Route path={"/404"} component={NotFound} />
-      <Route component={NotFound} />
-    </Switch>
-  );
-}
-
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
+import { Router, Route } from 'wouter'
+import { DashboardLayout } from './components/layout/DashboardLayout'
+import { DashboardPage } from './pages/dashboard'
+import { ChatPage } from './pages/chat'
 
 function App() {
   return (
-    <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </ThemeProvider>
-    </ErrorBoundary>
-  );
+    <Router>
+      <Route path="/chat" component={ChatPage} />
+      <Route path="/dashboard">
+        <DashboardLayout>
+          <Route path="/" component={DashboardPage} />
+          <Route path="/analytics" component={() => <div>数据分析页面</div>} />
+          <Route path="/conversations" component={() => <div>对话管理页面</div>} />
+          <Route path="/knowledge" component={() => <div>知识库页面</div>} />
+          <Route path="/content" component={() => <div>内容生成页面</div>} />
+          <Route path="/customers" component={() => <div>客户管理页面</div>} />
+          <Route path="/xiaohongshu" component={() => <div>小红书运营页面</div>} />
+          <Route path="/triggers" component={() => <div>自动化触发页面</div>} />
+          <Route path="/config" component={() => <div>系统配置页面</div>} />
+        </DashboardLayout>
+      </Route>
+      <Route path="/" component={() => <div>首页</div>} />
+    </Router>
+  )
 }
 
-export default App;
+export default App

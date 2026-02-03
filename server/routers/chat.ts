@@ -18,7 +18,6 @@ import { nanoid } from "nanoid";
 
 export const chatRouter = router({
   /**
-   * 创建新会话
    */
   createSession: publicProcedure.mutation(async () => {
     const sessionId = nanoid();
@@ -33,7 +32,6 @@ export const chatRouter = router({
   }),
 
   /**
-   * 发送消息并获取 AI 回复
    */
   sendMessage: publicProcedure
     .input(
@@ -201,7 +199,6 @@ export const chatRouter = router({
     }),
 
   /**
-   * 获取会话历史
    */
   getHistory: publicProcedure
     .input(z.object({ sessionId: z.string() }))
@@ -222,7 +219,6 @@ export const chatRouter = router({
     }),
 
   /**
-   * 获取所有对话
    */
   getConversations: publicProcedure.query(async () => {
     const conversations = await getAllConversations();
@@ -230,7 +226,6 @@ export const chatRouter = router({
   }),
 
   /**
-   * 获取对话消息
    */
   getMessages: publicProcedure
     .input(z.object({ conversationId: z.number() }))
@@ -240,7 +235,6 @@ export const chatRouter = router({
     }),
 
   /**
-   * 将对话转为线索
    */
   convertToLead: publicProcedure
     .input(

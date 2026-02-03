@@ -12,6 +12,10 @@ import { xiaohongshuRouter } from "./routers/xiaohongshu";
 import { adminAiRouter } from "./routers/admin-ai";
 import { triggersRouter } from "./routers/triggers";
 import { weworkRouter } from "./routers/wework";
+import { extensionsRouter } from "./routers/extensions";
+import { queueRouter } from "./routers/queue";
+import { ragRouter } from "./routers/rag";
+import { pipelineRouter } from "./routers/pipeline";
 
 export const appRouter = router({
   system: systemRouter,
@@ -35,6 +39,10 @@ export const appRouter = router({
   adminAi: adminAiRouter,
   triggers: triggersRouter,
   wework: weworkRouter,
+  extensions: extensionsRouter,
+  queue: queueRouter,
+  rag: ragRouter,
+  pipeline: pipelineRouter,
 });
 
 export type AppRouter = typeof appRouter;

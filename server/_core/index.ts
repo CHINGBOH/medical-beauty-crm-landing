@@ -7,6 +7,9 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { coreQueueService } from "../extensions/core/queue/core-queue.service";
+import { businessQueueService } from "../extensions/services/queue/business-queue.service";
+import { QueueStatusWebSocketService } from "../extensions/services/websocket/queue-status.service";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -30,11 +33,25 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   const app = express();
   const server = createServer(app);
+  // Initialize queue system for websocket status monitoring
+  await coreQueueService.initialize();
+  await businessQueueService.initialize();
+  new QueueStatusWebSocketService(server);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+  // basic metrics endpoint for Prometheus scraping
+  app.get("/metrics", (_req, res) => {
+    res.setHeader("content-type", "text/plain; version=0.0.4");
+    res.send(
+      [
+        `app_uptime_seconds ${Math.floor(process.uptime())}`,
+        `app_process_memory_rss_bytes ${process.memoryUsage().rss}`,
+      ].join("\n")
+    );
+  });
   // tRPC API
   app.use(
     "/api/trpc",
