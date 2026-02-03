@@ -10,6 +10,7 @@ type LeadNotificationPayload = {
   source?: string;
   sourceState?: string;
   externalUserId?: string;
+  message?: string;
 };
 
 export class NotificationService {
@@ -97,6 +98,7 @@ export class NotificationService {
       payload.externalUserId ? `外部联系人ID：${payload.externalUserId}` : null,
       payload.source ? `来源：${payload.source}` : null,
       payload.sourceState ? `来源标记：${payload.sourceState}` : null,
+      payload.message ? `备注：${payload.message}` : null,
     ].filter(Boolean);
     return lines.join("\n");
   }

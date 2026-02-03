@@ -116,6 +116,7 @@ export const leads = mysqlTable("leads", {
   interestedServices: text("interested_services"), // JSON 数组
   budget: varchar("budget", { length: 50 }),
   budgetLevel: mysqlEnum("budget_level", ["低", "中", "高"]), // 消费能力
+  birthday: timestamp("birthday"), // 客户生日
   message: text("message"),
   source: varchar("source", { length: 50 }).notNull(), // 来源渠道
   sourceContent: varchar("source_content", { length: 255 }), // 来源内容
