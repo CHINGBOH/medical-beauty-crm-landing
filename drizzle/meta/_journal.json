@@ -36,6 +36,13 @@
       "when": 1770099010254,
       "tag": "0004_heavy_nemesis",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1770102664009,
+      "tag": "0005_petite_sentinels",
+      "breakpoints": true
     }
   ]
 }

@@ -75,6 +75,11 @@ export const conversations = mysqlTable("conversations", {
   source: varchar("source", { length: 50 }).default("web").notNull(), // web/wechat/enterprise_wechat
   status: mysqlEnum("status", ["active", "converted", "closed"]).default("active").notNull(),
   leadId: varchar("lead_id", { length: 100 }), // 关联的 Airtable 线索 ID
+  // 客户画像字段
+  psychologyType: mysqlEnum("psychology_type", ["恐惧型", "贪婪型", "安全型", "敏感型"]), // 心理类型
+  psychologyTags: text("psychology_tags"), // JSON 数组，存储心理标签
+  budgetLevel: mysqlEnum("budget_level", ["低", "中", "高"]), // 消费能力
+  customerTier: mysqlEnum("customer_tier", ["A", "B", "C", "D"]), // 客户分层
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
 });

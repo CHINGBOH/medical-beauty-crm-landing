@@ -162,6 +162,18 @@ function generateCustomers(count = 100) {
     // 随机选择客户状态
     const status = weightedRandom(statuses);
     
+    // 计算客户分层（基于消费能力和心理类型）
+    let customerTier;
+    if (budgetLevel.level === "高" && (psychologyType.type === "贪婪型" || psychologyType.type === "敏感型")) {
+      customerTier = "A"; // 高消费 + 容易被影响 = A级
+    } else if (budgetLevel.level === "高" || (budgetLevel.level === "中" && psychologyType.type !== "安全型")) {
+      customerTier = "B"; // 高消费或中消费且非安全型 = B级
+    } else if (budgetLevel.level === "中" || (budgetLevel.level === "低" && psychologyType.type === "贪婪型")) {
+      customerTier = "C"; // 中消费或低消费但贪婪型 = C级
+    } else {
+      customerTier = "D"; // 其他 = D级
+    }
+    
     // 生成客户数据
     const customer = {
       name,
@@ -174,6 +186,7 @@ function generateCustomers(count = 100) {
       psychologyType: psychologyType.type,
       psychologyTags: JSON.stringify(psychologyType.tags.slice(0, 3)),
       budgetLevel: budgetLevel.level,
+      customerTier,
       status: status.status,
       notes: generateNotes(psychologyType, ageGroup, source),
       followUpDate: new Date(Date.now() + Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000),

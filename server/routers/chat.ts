@@ -12,7 +12,8 @@ import {
   incrementKnowledgeUsage,
   createLead
 } from "../db";
-import { createLeadInAirtable } from "../airtable";
+import { createLeadInAirtable, syncConversationToAirtable, getCustomerHistoryFromAirtable } from "../airtable";
+import { analyzePsychology, shouldAnalyzePsychology } from "../psychology-analyzer";
 import { nanoid } from "nanoid";
 
 export const chatRouter = router({
@@ -69,6 +70,27 @@ export const chatRouter = router({
       // 获取历史消息
       const history = await getMessagesByConversationId(conversation.id);
       
+      // 如果有客户手机号，从 Airtable 读取客户历史记录
+      let customerHistoryContext = "";
+      if (conversation.visitorPhone) {
+        const customerHistory = await getCustomerHistoryFromAirtable(conversation.visitorPhone);
+        if (customerHistory && (customerHistory.leads.length > 0 || customerHistory.conversations.length > 0)) {
+          customerHistoryContext = "\n\n客户历史记录：\n";
+          
+          if (customerHistory.leads.length > 0) {
+            const lead = customerHistory.leads[0]!;
+            customerHistoryContext += `- 客户姓名：${lead.fields["姓名"] || "未知"}\n`;
+            customerHistoryContext += `- 线索状态：${lead.fields["线索状态"] || "未知"}\n`;
+            customerHistoryContext += `- 意向项目：${lead.fields["意向项目"] || "未知"}\n`;
+            customerHistoryContext += `- 预算区间：${lead.fields["预算区间"] || "未知"}\n`;
+          }
+          
+          if (customerHistory.conversations.length > 0) {
+            customerHistoryContext += `- 历史对话次数：${customerHistory.conversations.length}\n`;
+          }
+        }
+      }
+      
       // 检索相关知识库内容
       const knowledgeItems = await getActiveKnowledge();
       let knowledgeContext = "";
@@ -91,7 +113,7 @@ export const chatRouter = router({
       
       // 构建消息历史
       const messages = [
-        { role: "system" as const, content: MEDICAL_BEAUTY_SYSTEM_PROMPT + knowledgeContext },
+        { role: "system" as const, content: MEDICAL_BEAUTY_SYSTEM_PROMPT + customerHistoryContext + knowledgeContext },
         ...history.slice(-10).map(h => ({
           role: h.role as "user" | "assistant",
           content: h.content,
@@ -125,6 +147,51 @@ export const chatRouter = router({
           visitorPhone: extractedInfo.phone || conversation.visitorPhone,
           visitorWechat: extractedInfo.wechat || conversation.visitorWechat,
         });
+        
+        // 同步对话到 Airtable
+        const updatedConversation = await getConversationBySessionId(sessionId);
+        if (updatedConversation && updatedConversation.visitorPhone) {
+          await syncConversationToAirtable({
+            sessionId: updatedConversation.sessionId,
+            visitorName: updatedConversation.visitorName || undefined,
+            visitorPhone: updatedConversation.visitorPhone,
+            visitorWechat: updatedConversation.visitorWechat || undefined,
+            messages: history.map(h => ({
+              role: h.role,
+              content: h.content,
+              createdAt: h.createdAt,
+            })),
+            source: updatedConversation.source,
+          });
+        }
+      }
+      
+      // 心理标签自动识别：当对话消息达到一定数量时触发
+      const messageCount = history.length + 1; // +1 因为刚才保存了新消息
+      if (shouldAnalyzePsychology(messageCount)) {
+        try {
+          const analysisResult = await analyzePsychology(
+            history.map(h => ({
+              role: h.role,
+              content: h.content,
+            }))
+          );
+          
+          // 如果置信度足够高，更新客户画像
+          if (analysisResult.confidence > 0.6) {
+            // 更新对话记录中的客户画像信息
+            await updateConversation(sessionId, {
+              psychologyType: analysisResult.psychologyType,
+              psychologyTags: JSON.stringify(analysisResult.psychologyTags),
+              budgetLevel: analysisResult.budgetLevel,
+              customerTier: analysisResult.customerTier,
+            });
+            
+            console.log(`[心理分析] 会话 ${sessionId} 的客户画像已更新：${analysisResult.psychologyType}，置信度 ${analysisResult.confidence}`);
+          }
+        } catch (error) {
+          console.error("[心理分析] 分析失败：", error);
+        }
       }
       
       return {
