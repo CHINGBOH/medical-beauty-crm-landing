@@ -13,6 +13,7 @@ import DashboardAnalytics from "./pages/DashboardAnalytics";
 import DashboardConversations from "./pages/DashboardConversations";
 import DashboardContent from "./pages/DashboardContent";
 import DashboardCustomers from "./pages/DashboardCustomers";
+import DashboardKnowledge from "./pages/DashboardKnowledge";
 
 function Router() {
   return (
@@ -26,6 +27,7 @@ function Router() {
       <Route path={"/dashboard/conversations"} component={DashboardConversations} />
       <Route path={"/dashboard/content"} component={DashboardContent} />
       <Route path={"/dashboard/customers"} component={DashboardCustomers} />
+      <Route path={"/dashboard/knowledge"} component={DashboardKnowledge} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

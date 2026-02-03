@@ -109,7 +109,7 @@ export async function createKnowledge(data: InsertKnowledgeBase) {
   await db.insert(knowledgeBase).values(data);
 }
 
-export async function getActiveKnowledge(category?: string) {
+export async function getActiveKnowledge(category?: string, type?: "customer" | "internal") {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
@@ -117,10 +117,53 @@ export async function getActiveKnowledge(category?: string) {
   if (category) {
     conditions.push(eq(knowledgeBase.category, category));
   }
+  if (type) {
+    conditions.push(eq(knowledgeBase.type, type));
+  }
   
   return db.select().from(knowledgeBase)
     .where(and(...conditions))
     .orderBy(desc(knowledgeBase.usedCount));
+}
+
+export async function getAllKnowledge(type?: "customer" | "internal") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  if (type) {
+    return db.select().from(knowledgeBase)
+      .where(eq(knowledgeBase.type, type))
+      .orderBy(desc(knowledgeBase.createdAt));
+  }
+  
+  return db.select().from(knowledgeBase).orderBy(desc(knowledgeBase.createdAt));
+}
+
+export async function getKnowledgeById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(knowledgeBase)
+    .where(eq(knowledgeBase.id, id))
+    .limit(1);
+  
+  return result[0];
+}
+
+export async function updateKnowledge(id: number, data: Partial<InsertKnowledgeBase>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.update(knowledgeBase)
+    .set(data)
+    .where(eq(knowledgeBase.id, id));
+}
+
+export async function deleteKnowledge(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  await db.delete(knowledgeBase).where(eq(knowledgeBase.id, id));
 }
 
 export async function incrementKnowledgeUsage(id: number) {

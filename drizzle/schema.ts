@@ -43,12 +43,14 @@ export type InsertSystemConfig = typeof systemConfig.$inferInsert;
 
 /**
  * 知识库表 - 存储医美项目知识、FAQ、注意事项等
+ * 支持两种类型：customer（客户问询）和 internal（内部管理）
  */
 export const knowledgeBase = mysqlTable("knowledge_base", {
   id: int("id").autoincrement().primaryKey(),
+  type: mysqlEnum("type", ["customer", "internal"]).default("customer").notNull(), // customer=客户问询知识库, internal=内部管理知识库
   title: varchar("title", { length: 255 }).notNull(),
   content: text("content").notNull(),
-  category: varchar("category", { length: 100 }).notNull(), // 项目介绍/FAQ/注意事项/价格政策
+  category: varchar("category", { length: 100 }).notNull(), // 项目介绍/FAQ/注意事项/价格政策/销售话术/心理分析/异议处理
   tags: text("tags"), // JSON 数组，如 ["超皮秒", "祛斑", "激光"]
   embedding: text("embedding"), // 向量嵌入，JSON 格式
   viewCount: int("view_count").default(0).notNull(),
