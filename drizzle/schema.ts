@@ -227,3 +227,93 @@ export const xiaohongshuComments = mysqlTable("xiaohongshu_comments", {
 
 export type XiaohongshuComment = typeof xiaohongshuComments.$inferSelect;
 export type InsertXiaohongshuComment = typeof xiaohongshuComments.$inferInsert;
+
+/**
+ * 企业微信配置表 - 存储企业微信应用配置
+ */
+export const weworkConfig = mysqlTable("wework_config", {
+  id: int("id").autoincrement().primaryKey(),
+  corpId: varchar("corp_id", { length: 100 }), // 企业 ID
+  corpSecret: varchar("corp_secret", { length: 200 }), // 应用 Secret
+  agentId: int("agent_id"), // 应用 AgentID
+  token: varchar("token", { length: 100 }), // 回调 Token
+  encodingAesKey: varchar("encoding_aes_key", { length: 200 }), // 回调加密密钥
+  accessToken: text("access_token"), // Access Token（缓存）
+  tokenExpiresAt: timestamp("token_expires_at"), // Token 过期时间
+  isActive: int("is_active").default(1).notNull(), // 1=启用, 0=禁用
+  isMockMode: int("is_mock_mode").default(1).notNull(), // 1=模拟模式, 0=真实模式
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WeworkConfig = typeof weworkConfig.$inferSelect;
+export type InsertWeworkConfig = typeof weworkConfig.$inferInsert;
+
+/**
+ * 企业微信"联系我"配置表 - 存储生成的二维码配置
+ */
+export const weworkContactWay = mysqlTable("wework_contact_way", {
+  id: int("id").autoincrement().primaryKey(),
+  configId: varchar("config_id", { length: 100 }).notNull().unique(), // 企业微信返回的配置 ID
+  type: mysqlEnum("type", ["single", "multi"]).default("single").notNull(), // single=单人, multi=多人
+  scene: mysqlEnum("scene", ["1", "2"]).default("1").notNull(), // 1=在小程序中联系, 2=通过二维码联系
+  qrCode: text("qr_code"), // 二维码 URL
+  remark: varchar("remark", { length: 255 }), // 备注说明
+  skipVerify: int("skip_verify").default(1).notNull(), // 1=自动添加, 0=需要验证
+  state: varchar("state", { length: 100 }), // 自定义状态（用于追踪来源）
+  userIds: text("user_ids"), // JSON 数组，企业成员 UserID 列表
+  isActive: int("is_active").default(1).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WeworkContactWay = typeof weworkContactWay.$inferSelect;
+export type InsertWeworkContactWay = typeof weworkContactWay.$inferInsert;
+
+/**
+ * 企业微信客户表 - 存储通过企业微信添加的客户
+ */
+export const weworkCustomers = mysqlTable("wework_customers", {
+  id: int("id").autoincrement().primaryKey(),
+  externalUserId: varchar("external_user_id", { length: 100 }).notNull().unique(), // 企业微信外部联系人 ID
+  name: varchar("name", { length: 100 }),
+  avatar: text("avatar"), // 头像 URL
+  type: mysqlEnum("type", ["1", "2"]).default("1").notNull(), // 1=微信用户, 2=企业微信用户
+  gender: mysqlEnum("gender", ["0", "1", "2"]).default("0").notNull(), // 0=未知, 1=男, 2=女
+  unionId: varchar("union_id", { length: 100 }), // 微信 UnionID
+  position: varchar("position", { length: 100 }), // 职位
+  corpName: varchar("corp_name", { length: 200 }), // 企业名称
+  corpFullName: varchar("corp_full_name", { length: 200 }), // 企业全称
+  externalProfile: text("external_profile"), // JSON 格式，外部联系人详细信息
+  followUserId: varchar("follow_user_id", { length: 100 }), // 添加该客户的企业成员 UserID
+  remark: varchar("remark", { length: 255 }), // 备注
+  description: text("description"), // 描述
+  createTime: timestamp("create_time"), // 添加时间（企业微信）
+  tags: text("tags"), // JSON 数组，标签列表
+  state: varchar("state", { length: 100 }), // 来源（对应"联系我"的 state）
+  conversationId: int("conversation_id"), // 关联的对话 ID
+  leadId: varchar("lead_id", { length: 100 }), // 关联的 Airtable 线索 ID
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+export type WeworkCustomer = typeof weworkCustomers.$inferSelect;
+export type InsertWeworkCustomer = typeof weworkCustomers.$inferInsert;
+
+/**
+ * 企业微信消息记录表 - 存储发送的消息
+ */
+export const weworkMessages = mysqlTable("wework_messages", {
+  id: int("id").autoincrement().primaryKey(),
+  externalUserId: varchar("external_user_id", { length: 100 }).notNull(), // 接收消息的客户 ID
+  sendUserId: varchar("send_user_id", { length: 100 }).notNull(), // 发送消息的企业成员 UserID
+  msgType: varchar("msg_type", { length: 20 }).notNull(), // text/image/link/miniprogram
+  content: text("content").notNull(), // 消息内容（JSON 格式）
+  status: mysqlEnum("status", ["pending", "sent", "failed"]).default("pending").notNull(),
+  errorMsg: text("error_msg"), // 错误信息
+  sentAt: timestamp("sent_at"), // 发送时间
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type WeworkMessage = typeof weworkMessages.$inferSelect;
+export type InsertWeworkMessage = typeof weworkMessages.$inferInsert;

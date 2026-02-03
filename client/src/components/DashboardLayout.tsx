@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Settings, BarChart3, MessageSquare, FileText, Users, BookOpen, Instagram, Sparkles, PanelLeft, LogOut, Cog } from "lucide-react";
+import { Settings, BarChart3, MessageSquare, FileText, Users, BookOpen, Instagram, Sparkles, PanelLeft, LogOut, Cog, Smartphone } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -36,6 +36,7 @@ const menuItems = [
   { icon: FileText, label: "内容管理", path: "/dashboard/content" },
   { icon: Users, label: "客户管理", path: "/dashboard/customers" },
   { icon: Instagram, label: "小红书运营", path: "/dashboard/xiaohongshu" },
+  { icon: Smartphone, label: "企业微信", path: "/dashboard/wework" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";

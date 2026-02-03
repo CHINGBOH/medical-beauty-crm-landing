@@ -16,6 +16,7 @@ import DashboardCustomers from "./pages/DashboardCustomers";
 import DashboardKnowledge from "./pages/DashboardKnowledge";
 import DashboardXiaohongshu from "./pages/DashboardXiaohongshu";
 import DashboardAI from "./pages/DashboardAI";
+import DashboardWework from "./pages/DashboardWework";
 
 function Router() {
   return (
@@ -33,6 +34,7 @@ function Router() {
       <Route path={"/dashboard/knowledge"} component={DashboardKnowledge} />
       <Route path={"/dashboard/xiaohongshu"} component={DashboardXiaohongshu} />
       <Route path={"/dashboard/ai"} component={DashboardAI} />
+      <Route path={"/dashboard/wework"} component={DashboardWework} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
