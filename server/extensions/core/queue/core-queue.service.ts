@@ -1,4 +1,4 @@
-import { Queue, Worker, Job, QueueEvents, QueueScheduler } from 'bullmq';
+import { Queue, Worker, Job, QueueEvents } from 'bullmq';
 import IORedis from 'ioredis';
 import { EventEmitter } from 'events';
 import { logger, metrics } from '../../utils';
@@ -47,9 +47,10 @@ export class CoreQueueService extends EventEmitter {
   private redis: IORedis;
   private queues: Map<string, Queue> = new Map();
   private workers: Map<string, Worker> = new Map();
-  private schedulers: Map<string, QueueScheduler> = new Map();
   private events: Map<string, QueueEvents> = new Map();
   private connection: IORedis.Redis;
+  private redisAvailable = false;
+  private initialized = false;
   
   // 队列配置
   private readonly queueConfigs: Record<string, QueueConfig> = {
@@ -142,7 +143,10 @@ export class CoreQueueService extends EventEmitter {
       port: parseInt(process.env.REDIS_PORT || '6379'),
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
-      connectionName: 'bullmq-core'
+      connectionName: 'bullmq-core',
+      lazyConnect: true,
+      enableOfflineQueue: false,
+      retryStrategy: () => null
     });
 
     // 创建用于监听的Redis连接
@@ -151,7 +155,18 @@ export class CoreQueueService extends EventEmitter {
       port: parseInt(process.env.REDIS_PORT || '6379'),
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
-      connectionName: 'bullmq-events'
+      connectionName: 'bullmq-events',
+      lazyConnect: true,
+      enableOfflineQueue: false,
+      retryStrategy: () => null
+    });
+
+    this.connection.on('error', (error) => {
+      logger.warn('Redis连接异常 (core):', error);
+    });
+
+    this.redis.on('error', (error) => {
+      logger.warn('Redis连接异常 (events):', error);
     });
   }
 
@@ -160,6 +175,15 @@ export class CoreQueueService extends EventEmitter {
   async initialize(): Promise<void> {
     try {
       logger.info('开始初始化消息队列...');
+
+      try {
+        await this.connection.connect();
+        await this.redis.connect();
+        this.redisAvailable = true;
+      } catch (error) {
+        logger.warn('Redis未就绪，跳过消息队列初始化。', error);
+        return;
+      }
       
       // 初始化每个队列
       for (const config of Object.values(this.queueConfigs)) {
@@ -170,11 +194,20 @@ export class CoreQueueService extends EventEmitter {
       await this.startMonitoring();
       
       logger.info('消息队列初始化完成');
+      this.initialized = true;
       this.emit('initialized');
     } catch (error) {
       logger.error('消息队列初始化失败:', error);
       throw error;
     }
+  }
+
+  getQueueConfigs(): Record<string, QueueConfig> {
+    return this.queueConfigs;
+  }
+
+  isReady(): boolean {
+    return this.initialized;
   }
 
   /**
@@ -183,28 +216,21 @@ export class CoreQueueService extends EventEmitter {
     const { name } = config;
     
     try {
-      // 1. 创建队列调度器
-      const scheduler = new QueueScheduler(name, {
-        connection: this.connection,
-        stalledInterval: 30000  // 30秒检查一次失活任务
-      });
-      this.schedulers.set(name, scheduler);
-      
-      // 2. 创建队列
+      // 1. 创建队列
       const queue = new Queue(name, {
         connection: this.connection,
         defaultJobOptions: config.defaultJobOptions
       });
       this.queues.set(name, queue);
       
-      // 3. 创建队列事件监听
+      // 2. 创建队列事件监听
       const events = new QueueEvents(name, { connection: this.redis });
       this.events.set(name, events);
       
-      // 4. 创建工作线程（需要业务逻辑注入）
+      // 3. 创建工作线程（需要业务逻辑注入）
       // 这里只创建队列，工作线程在业务层注册
       
-      // 5. 设置队列事件监听
+      // 4. 设置队列事件监听
       this.setupQueueEvents(queue, events);
       
       logger.info(`队列创建成功: ${name}`);
@@ -617,12 +643,6 @@ export class CoreQueueService extends EventEmitter {
       logger.info(`队列事件监听已关闭: ${name}`);
     }
     
-    // 关闭队列调度器
-    for (const [name, scheduler] of this.schedulers) {
-      await scheduler.close();
-      logger.info(`队列调度器已关闭: ${name}`);
-    }
-    
     // 关闭队列
     for (const [name, queue] of this.queues) {
       await queue.close();
@@ -630,8 +650,11 @@ export class CoreQueueService extends EventEmitter {
     }
     
     // 关闭Redis连接
-    await this.connection.quit();
-    await this.redis.quit();
+    if (this.redisAvailable) {
+      await this.connection.quit();
+      await this.redis.quit();
+    }
+    this.initialized = false;
     
     logger.info('消息队列服务已完全关闭');
   }

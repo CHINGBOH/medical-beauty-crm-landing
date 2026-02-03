@@ -2,6 +2,7 @@ import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { getActiveKnowledge, createContentPost, getContentPosts } from "../db";
+import { getActiveContactWay } from "../wework-db";
 import { generateImage } from "../_core/imageGeneration";
 
 const CONTENT_GENERATION_PROMPT = `你是一位专业的小红书医美内容创作者，擅长撰写吸引人的医美项目推广文案。
@@ -129,10 +130,14 @@ export const contentRouter = router({
         ? response.choices[0].message.content 
         : JSON.stringify(response.choices[0].message.content);
       const generatedContent = JSON.parse(contentString || "{}");
+      const contactWay = await getActiveContactWay().catch(() => null);
+      const qrBlock = contactWay?.qrCode
+        ? `\n\n📲 想了解更多或预约咨询，可添加企业微信：\n${contactWay.qrCode}\n（备注：小红书咨询）`
+        : "";
 
       return {
         title: generatedContent.title,
-        content: generatedContent.content,
+        content: `${generatedContent.content || ""}${qrBlock}`,
         tags: generatedContent.tags,
       };
     }),

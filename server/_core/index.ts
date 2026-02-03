@@ -10,6 +10,7 @@ import { serveStatic, setupVite } from "./vite";
 import { coreQueueService } from "../extensions/core/queue/core-queue.service";
 import { businessQueueService } from "../extensions/services/queue/business-queue.service";
 import { QueueStatusWebSocketService } from "../extensions/services/websocket/queue-status.service";
+import { handleWeworkWebhook } from "../wework-webhook";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -40,6 +41,15 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  app.post("/api/wework/webhook", async (req, res) => {
+    try {
+      const result = await handleWeworkWebhook(req.body);
+      res.json(result);
+    } catch (error) {
+      console.error("Wework webhook failed:", error);
+      res.status(500).json({ success: false, error: "Webhook failed" });
+    }
+  });
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
   // basic metrics endpoint for Prometheus scraping

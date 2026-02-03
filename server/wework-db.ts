@@ -1,6 +1,6 @@
 import { getDb } from "./db";
 import { weworkConfig, weworkContactWay, weworkCustomers, weworkMessages } from "../drizzle/schema";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 /**
  */
@@ -81,6 +81,18 @@ export async function listContactWays() {
   if (!db) throw new Error("Database not available");
   return await db.select().from(weworkContactWay)
     .where(eq(weworkContactWay.isActive, 1));
+}
+
+export async function getActiveContactWay() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const ways = await db
+    .select()
+    .from(weworkContactWay)
+    .where(eq(weworkContactWay.isActive, 1))
+    .orderBy(desc(weworkContactWay.createdAt))
+    .limit(1);
+  return ways[0] || null;
 }
 
 export async function deleteContactWay(configId: string) {
