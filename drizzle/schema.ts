@@ -133,3 +133,97 @@ export const leads = mysqlTable("leads", {
 
 export type Lead = typeof leads.$inferSelect;
 export type InsertLead = typeof leads.$inferInsert;
+
+/**
+ * 触发器表 - 存储自动化营销触发规则
+ */
+export const triggers = mysqlTable("triggers", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(), // 触发器名称
+  description: text("description"), // 描述
+  type: mysqlEnum("type", ["time", "behavior", "weather"]).notNull(), // 触发类型
+  // 时间触发配置
+  timeConfig: text("time_config"), // JSON: { type: "birthday|holiday|reminder", date: "2024-01-01", time: "10:00", repeat: "yearly|monthly|once" }
+  // 行为触发配置
+  behaviorConfig: text("behavior_config"), // JSON: { event: "browse_no_consult|consult_no_book|book_no_show", duration: 24, unit: "hours" }
+  // 天气触发配置
+  weatherConfig: text("weather_config"), // JSON: { condition: "sunny|rainy|hot|cold", temperature: { min: 25, max: 35 }, projects: ["防晒", "补水"] }
+  // 触发动作
+  action: mysqlEnum("action", ["send_message", "send_email", "create_task", "notify_staff"]).notNull(),
+  actionConfig: text("action_config"), // JSON: { template: "xxx", content: "xxx", channel: "wechat|sms|email" }
+  // 目标客户筛选
+  targetFilter: text("target_filter"), // JSON: { customerTier: ["A", "B"], psychologyType: ["恐惧型"], source: ["小红书"] }
+  isActive: int("is_active").default(1).notNull(), // 1=active, 0=inactive
+  executionCount: int("execution_count").default(0).notNull(), // 执行次数
+  lastExecutedAt: timestamp("last_executed_at"), // 最后执行时间
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Trigger = typeof triggers.$inferSelect;
+export type InsertTrigger = typeof triggers.$inferInsert;
+
+/**
+ * 触发器执行记录表 - 记录每次触发的执行情况
+ */
+export const triggerExecutions = mysqlTable("trigger_executions", {
+  id: int("id").autoincrement().primaryKey(),
+  triggerId: int("trigger_id").notNull(), // 关联触发器 ID
+  leadId: int("lead_id"), // 关联线索 ID
+  executedAt: timestamp("executed_at").defaultNow().notNull(),
+  status: mysqlEnum("status", ["success", "failed", "skipped"]).notNull(),
+  result: text("result"), // 执行结果详情
+  errorMessage: text("error_message"), // 错误信息
+});
+
+export type TriggerExecution = typeof triggerExecutions.$inferSelect;
+export type InsertTriggerExecution = typeof triggerExecutions.$inferInsert;
+
+/**
+ * 小红书内容表 - 存储小红书发布的内容及数据
+ */
+export const xiaohongshuPosts = mysqlTable("xiaohongshu_posts", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  images: text("images"), // JSON 数组，存储图片 URL
+  tags: text("tags"), // JSON 数组，存储话题标签
+  contentType: varchar("content_type", { length: 50 }).notNull(), // 项目体验/效果对比/价格揭秘/避坑指南/节日营销
+  project: varchar("project", { length: 100 }), // 关联项目
+  status: mysqlEnum("status", ["draft", "scheduled", "published", "deleted"]).default("draft").notNull(),
+  publishedAt: timestamp("published_at"), // 发布时间
+  scheduledAt: timestamp("scheduled_at"), // 计划发布时间
+  // 数据监控
+  viewCount: int("view_count").default(0).notNull(), // 阅读量
+  likeCount: int("like_count").default(0).notNull(), // 点赞数
+  commentCount: int("comment_count").default(0).notNull(), // 评论数
+  shareCount: int("share_count").default(0).notNull(), // 转发数
+  collectCount: int("collect_count").default(0).notNull(), // 收藏数
+  lastSyncedAt: timestamp("last_synced_at"), // 最后同步数据时间
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+});
+
+export type XiaohongshuPost = typeof xiaohongshuPosts.$inferSelect;
+export type InsertXiaohongshuPost = typeof xiaohongshuPosts.$inferInsert;
+
+/**
+ * 小红书评论表 - 存储小红书内容的评论
+ */
+export const xiaohongshuComments = mysqlTable("xiaohongshu_comments", {
+  id: int("id").autoincrement().primaryKey(),
+  postId: int("post_id").notNull(), // 关联内容 ID
+  authorName: varchar("author_name", { length: 100 }).notNull(), // 评论者昵称
+  authorAvatar: varchar("author_avatar", { length: 500 }), // 评论者头像
+  content: text("content").notNull(), // 评论内容
+  replyContent: text("reply_content"), // 回复内容
+  replyStatus: mysqlEnum("reply_status", ["pending", "replied", "ignored"]).default("pending").notNull(),
+  sentiment: mysqlEnum("sentiment", ["positive", "neutral", "negative"]), // 情感分析
+  isFiltered: int("is_filtered").default(0).notNull(), // 是否被敏感词过滤
+  commentedAt: timestamp("commented_at").notNull(), // 评论时间
+  repliedAt: timestamp("replied_at"), // 回复时间
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export type XiaohongshuComment = typeof xiaohongshuComments.$inferSelect;
+export type InsertXiaohongshuComment = typeof xiaohongshuComments.$inferInsert;

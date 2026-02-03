@@ -43,6 +43,13 @@
       "when": 1770102664009,
       "tag": "0005_petite_sentinels",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1770103339214,
+      "tag": "0006_tricky_ultragirl",
+      "breakpoints": true
     }
   ]
 }

@@ -279,3 +279,85 @@ export async function getLeadById(id: number) {
   const result = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
   return result[0] || null;
 }
+
+
+// ==================== 小红书相关 ====================
+
+export async function getAllXiaohongshuPosts(status?: "draft" | "scheduled" | "published" | "deleted", limit = 20, offset = 0) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { xiaohongshuPosts } = await import("../drizzle/schema");
+  
+  let query = db.select().from(xiaohongshuPosts);
+  if (status) {
+    query = query.where(eq(xiaohongshuPosts.status, status)) as any;
+  }
+  
+  const posts = await query.orderBy(desc(xiaohongshuPosts.createdAt)).limit(limit).offset(offset);
+  return posts;
+}
+
+export async function getXiaohongshuPostById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { xiaohongshuPosts } = await import("../drizzle/schema");
+  
+  const result = await db.select().from(xiaohongshuPosts).where(eq(xiaohongshuPosts.id, id)).limit(1);
+  return result[0] || null;
+}
+
+export async function createXiaohongshuPost(data: any) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { xiaohongshuPosts } = await import("../drizzle/schema");
+  
+  const result = await db.insert(xiaohongshuPosts).values(data);
+  return { id: Number((result as any).insertId) };
+}
+
+export async function updateXiaohongshuPost(id: number, data: any) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { xiaohongshuPosts } = await import("../drizzle/schema");
+  
+  await db.update(xiaohongshuPosts).set(data).where(eq(xiaohongshuPosts.id, id));
+  return { success: true };
+}
+
+export async function getXiaohongshuComments(postId: number, replyStatus?: "pending" | "replied" | "ignored") {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { xiaohongshuComments } = await import("../drizzle/schema");
+  
+  if (replyStatus) {
+    const comments = await db.select().from(xiaohongshuComments)
+      .where(and(eq(xiaohongshuComments.postId, postId), eq(xiaohongshuComments.replyStatus, replyStatus)))
+      .orderBy(desc(xiaohongshuComments.commentedAt));
+    return comments;
+  }
+  
+  const comments = await db.select().from(xiaohongshuComments)
+    .where(eq(xiaohongshuComments.postId, postId))
+    .orderBy(desc(xiaohongshuComments.commentedAt));
+  return comments;
+}
+
+export async function replyXiaohongshuComment(id: number, replyContent: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { xiaohongshuComments } = await import("../drizzle/schema");
+  
+  await db.update(xiaohongshuComments).set({
+    replyContent,
+    replyStatus: "replied",
+    repliedAt: new Date(),
+  }).where(eq(xiaohongshuComments.id, id));
+  
+  return { success: true };
+}
