@@ -10,6 +10,7 @@ import { contentRouter } from "./routers/content";
 import { customersRouter } from "./routers/customers";
 import { xiaohongshuRouter } from "./routers/xiaohongshu";
 import { adminAiRouter } from "./routers/admin-ai";
+import { triggersRouter } from "./routers/triggers";
 
 export const appRouter = router({
   system: systemRouter,
@@ -31,6 +32,7 @@ export const appRouter = router({
   customers: customersRouter,
   xiaohongshu: xiaohongshuRouter,
   adminAi: adminAiRouter,
+  triggers: triggersRouter,
 });
 
 export type AppRouter = typeof appRouter;

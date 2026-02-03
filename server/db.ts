@@ -361,3 +361,79 @@ export async function replyXiaohongshuComment(id: number, replyContent: string) 
   
   return { success: true };
 }
+
+
+// ==================== Triggers ====================
+
+export async function getAllTriggers() {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { triggers } = await import("../drizzle/schema");
+  
+  const result = await db.select().from(triggers).orderBy(desc(triggers.createdAt));
+  return result;
+}
+
+export async function getTriggerById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { triggers } = await import("../drizzle/schema");
+  
+  const result = await db.select().from(triggers).where(eq(triggers.id, id));
+  return result[0] || null;
+}
+
+export async function createTrigger(data: any) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { triggers } = await import("../drizzle/schema");
+  
+  const result = await db.insert(triggers).values(data);
+  return { id: Number((result as any).insertId) };
+}
+
+export async function updateTrigger(id: number, data: any) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { triggers } = await import("../drizzle/schema");
+  
+  await db.update(triggers).set(data).where(eq(triggers.id, id));
+  return { success: true };
+}
+
+export async function deleteTrigger(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { triggers } = await import("../drizzle/schema");
+  
+  await db.delete(triggers).where(eq(triggers.id, id));
+  return { success: true };
+}
+
+export async function getTriggerExecutions(triggerId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { triggerExecutions } = await import("../drizzle/schema");
+  
+  const result = await db.select().from(triggerExecutions)
+    .where(eq(triggerExecutions.triggerId, triggerId))
+    .orderBy(desc(triggerExecutions.executedAt))
+    .limit(50);
+  return result;
+}
+
+export async function createTriggerExecution(data: any) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { triggerExecutions } = await import("../drizzle/schema");
+  
+  const result = await db.insert(triggerExecutions).values(data);
+  return { id: Number((result as any).insertId) };
+}
