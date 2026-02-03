@@ -6,6 +6,7 @@ import { chatRouter } from "./routers/chat";
 import { adminRouter } from "./routers/admin";
 import { analyticsRouter } from "./routers/analytics";
 import { knowledgeRouter } from "./routers/knowledge";
+import { contentRouter } from "./routers/content";
 
 export const appRouter = router({
   system: systemRouter,
@@ -23,6 +24,7 @@ export const appRouter = router({
   admin: adminRouter,
   analytics: analyticsRouter,
   knowledge: knowledgeRouter,
+  content: contentRouter,
 });
 
 export type AppRouter = typeof appRouter;

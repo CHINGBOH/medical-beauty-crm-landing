@@ -3,65 +3,57 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Sparkles, Copy, Check } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, Sparkles, Copy, Check, Plus, X } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { toast } from "sonner";
+import { trpc } from "@/lib/trpc";
+
+type ContentType = "project" | "case" | "price" | "guide" | "holiday";
+type ToneType = "enthusiastic" | "professional" | "casual";
 
 export default function DashboardContent() {
-  const [generating, setGenerating] = useState(false);
-  const [generatedContent, setGeneratedContent] = useState<{
-    title: string;
-    content: string;
-    tags: string[];
-  } | null>(null);
+  const [contentType, setContentType] = useState<ContentType>("project");
+  const [project, setProject] = useState("超皮秒祛斑");
+  const [tone, setTone] = useState<ToneType>("enthusiastic");
+  const [keywords, setKeywords] = useState<string[]>([]);
+  const [keywordInput, setKeywordInput] = useState("");
   const [copied, setCopied] = useState(false);
 
-  const handleGenerate = async () => {
-    setGenerating(true);
-    // 模拟生成内容（实际应该调用 LLM API）
-    setTimeout(() => {
-      setGeneratedContent({
-        title: "🌟超皮秒祛斑实录｜3次治疗后我的斑真的淡了！",
-        content: `姐妹们！我终于鼓起勇气去做了超皮秒祛斑！💪
-
-📍 选择理由：
-深圳妍美医疗美容门诊部，朋友推荐的，医生很专业，设备是进口的蜂巢超皮秒，FDA认证✅
-
-💰 价格：
-单次3800元，我做了3次疗程套餐优惠价9800元
-
-😖 疼痛感：
-说实话有点疼，但完全能忍受！就像橡皮筋弹脸的感觉，涂了麻药后好很多
-
-⏰ 恢复期：
-- 第1天：脸有点红肿，像晒伤
-- 第3天：开始结痂（千万别抠！）
-- 第7天：痂皮自然脱落，皮肤嫩嫩的
-- 第14天：斑明显淡了30%！
-
-✨ 效果：
-第一次做完就能看到效果，斑点真的淡了！医生说要3-5次才能完全去除，我现在做完3次，斑淡了70%左右，超满意！
-
-⚠️ 注意事项：
-1. 一定要防晒！！！SPF50+每2小时补一次
-2. 不要用美白产品，会刺激皮肤
-3. 多喝水，多吃维C
-4. 不要熬夜，会影响恢复
-
-💡 建议：
-如果你也被斑困扰，真的可以试试超皮秒！选择正规医美机构很重要，不要贪便宜去小作坊！
-
-有问题欢迎评论区问我～`,
-        tags: ["#超皮秒祛斑", "#医美日记", "#祛斑实录", "#深圳医美", "#医美变美"],
-      });
-      setGenerating(false);
+  const generateMutation = trpc.content.generate.useMutation({
+    onSuccess: () => {
       toast.success("内容生成成功！");
-    }, 2000);
+    },
+    onError: (error) => {
+      toast.error(`生成失败：${error.message}`);
+    },
+  });
+
+  const handleGenerate = () => {
+    generateMutation.mutate({
+      type: contentType,
+      project: project || undefined,
+      keywords: keywords.length > 0 ? keywords : undefined,
+      tone,
+    });
+  };
+
+  const handleAddKeyword = () => {
+    if (keywordInput.trim() && !keywords.includes(keywordInput.trim())) {
+      setKeywords([...keywords, keywordInput.trim()]);
+      setKeywordInput("");
+    }
+  };
+
+  const handleRemoveKeyword = (keyword: string) => {
+    setKeywords(keywords.filter((k) => k !== keyword));
   };
 
   const handleCopy = () => {
-    if (!generatedContent) return;
-    const fullText = `${generatedContent.title}\n\n${generatedContent.content}\n\n${generatedContent.tags.join(" ")}`;
+    if (!generateMutation.data) return;
+    const fullText = `${generateMutation.data.title}\n\n${generateMutation.data.content}\n\n${generateMutation.data.tags.join(" ")}`;
     navigator.clipboard.writeText(fullText);
     setCopied(true);
     toast.success("已复制到剪贴板");
@@ -89,14 +81,108 @@ export default function DashboardContent() {
               自动生成符合小红书风格的医美项目推广文案
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-6">
+            {/* 配置选项 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* 内容类型 */}
+              <div className="space-y-2">
+                <Label>内容类型</Label>
+                <Select value={contentType} onValueChange={(v) => setContentType(v as ContentType)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="project">项目体验分享</SelectItem>
+                    <SelectItem value="case">效果对比展示</SelectItem>
+                    <SelectItem value="price">价格揭秘</SelectItem>
+                    <SelectItem value="guide">避坑指南</SelectItem>
+                    <SelectItem value="holiday">节日营销</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 项目选择 */}
+              <div className="space-y-2">
+                <Label>医美项目</Label>
+                <Select value={project} onValueChange={setProject}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="超皮秒祛斑">超皮秒祛斑</SelectItem>
+                    <SelectItem value="水光针">水光针</SelectItem>
+                    <SelectItem value="热玛吉">热玛吉</SelectItem>
+                    <SelectItem value="冷光美白">冷光美白</SelectItem>
+                    <SelectItem value="隐形矫正">隐形矫正</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 语气风格 */}
+              <div className="space-y-2">
+                <Label>语气风格</Label>
+                <Select value={tone} onValueChange={(v) => setTone(v as ToneType)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="enthusiastic">热情洋溢</SelectItem>
+                    <SelectItem value="professional">专业严谨</SelectItem>
+                    <SelectItem value="casual">轻松随意</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* 关键词 */}
+              <div className="space-y-2">
+                <Label>关键词（可选）</Label>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="输入关键词"
+                    value={keywordInput}
+                    onChange={(e) => setKeywordInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddKeyword();
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleAddKeyword}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+                {keywords.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {keywords.map((keyword) => (
+                      <Badge key={keyword} variant="secondary" className="gap-1">
+                        {keyword}
+                        <button
+                          onClick={() => handleRemoveKeyword(keyword)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 生成按钮 */}
             <Button
               onClick={handleGenerate}
-              disabled={generating}
+              disabled={generateMutation.isPending}
               size="lg"
               className="w-full"
             >
-              {generating ? (
+              {generateMutation.isPending ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   生成中...
@@ -109,13 +195,14 @@ export default function DashboardContent() {
               )}
             </Button>
 
-            {generatedContent && (
+            {/* 生成结果 */}
+            {generateMutation.data && (
               <div className="space-y-4 pt-4 border-t">
                 {/* 标题 */}
                 <div>
                   <div className="text-sm font-medium mb-2">标题</div>
                   <div className="p-3 bg-muted rounded-lg">
-                    <p className="font-medium">{generatedContent.title}</p>
+                    <p className="font-medium">{generateMutation.data.title}</p>
                   </div>
                 </div>
 
@@ -123,7 +210,7 @@ export default function DashboardContent() {
                 <div>
                   <div className="text-sm font-medium mb-2">正文</div>
                   <Textarea
-                    value={generatedContent.content}
+                    value={generateMutation.data.content}
                     readOnly
                     rows={20}
                     className="font-sans resize-none"
@@ -134,7 +221,7 @@ export default function DashboardContent() {
                 <div>
                   <div className="text-sm font-medium mb-2">话题标签</div>
                   <div className="flex flex-wrap gap-2">
-                    {generatedContent.tags.map((tag, index) => (
+                    {generateMutation.data.tags.map((tag: string, index: number) => (
                       <Badge key={index} variant="secondary">
                         {tag}
                       </Badge>
@@ -174,9 +261,12 @@ export default function DashboardContent() {
           </CardHeader>
           <CardContent className="prose prose-sm max-w-none">
             <ol className="space-y-2">
-              <li>点击"一键生成爽文"按钮，AI 会自动生成一篇小红书风格的医美项目推广文案</li>
-              <li>生成的内容包括：吸引眼球的标题、详细的正文、相关话题标签</li>
-              <li>可以点击"复制全部"一键复制到剪贴板，然后粘贴到小红书发布</li>
+              <li>选择内容类型：项目体验分享、效果对比、价格揭秘、避坑指南、节日营销</li>
+              <li>选择要推广的医美项目：超皮秒祛斑、水光针、热玛吉、冷光美白、隐形矫正</li>
+              <li>选择语气风格：热情洋溢、专业严谨、轻松随意</li>
+              <li>（可选）添加必须包含的关键词，让内容更贴合需求</li>
+              <li>点击"一键生成爽文"，AI 会基于知识库内容自动生成小红书风格文案</li>
+              <li>生成后可以点击"复制全部"一键复制到剪贴板，然后粘贴到小红书发布</li>
               <li>如果对生成的内容不满意，可以点击"重新生成"获取新的文案</li>
               <li>建议配合真实的术前术后对比照片，效果更佳</li>
             </ol>
