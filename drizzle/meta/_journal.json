@@ -29,6 +29,13 @@
       "when": 1770096449512,
       "tag": "0003_faithful_silvermane",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1770099010254,
+      "tag": "0004_heavy_nemesis",
+      "breakpoints": true
     }
   ]
 }

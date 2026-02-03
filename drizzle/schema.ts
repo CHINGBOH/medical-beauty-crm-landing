@@ -107,14 +107,22 @@ export const leads = mysqlTable("leads", {
   name: varchar("name", { length: 100 }).notNull(),
   phone: varchar("phone", { length: 20 }).notNull(),
   wechat: varchar("wechat", { length: 100 }),
+  age: int("age"), // 年龄
   interestedServices: text("interested_services"), // JSON 数组
   budget: varchar("budget", { length: 50 }),
+  budgetLevel: mysqlEnum("budget_level", ["低", "中", "高"]), // 消费能力
   message: text("message"),
   source: varchar("source", { length: 50 }).notNull(), // 来源渠道
   sourceContent: varchar("source_content", { length: 255 }), // 来源内容
-  status: varchar("status", { length: 50 }).default("新线索").notNull(),
+  status: varchar("status", { length: 50 }).default("new").notNull(), // new/contacted/interested/quoted/converted
+  psychologyType: varchar("psychology_type", { length: 50 }), // 心理类型：恐惧型/贪婪型/安全型/敏感型
+  psychologyTags: text("psychology_tags"), // 心理标签，JSON 数组
+  customerTier: mysqlEnum("customer_tier", ["A", "B", "C", "D"]), // 客户分层：A=高价值 B=中价值 C=低价值 D=无效
+  notes: text("notes"), // 备注
+  followUpDate: timestamp("follow_up_date"), // 下次跟进日期
   conversationId: int("conversation_id"), // 关联的对话 ID
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
   syncedAt: timestamp("synced_at"), // 同步到 Airtable 的时间
 });
 

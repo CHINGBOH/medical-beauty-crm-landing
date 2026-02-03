@@ -271,3 +271,11 @@ export async function getAllLeads() {
   
   return db.select().from(leads).orderBy(desc(leads.createdAt));
 }
+
+export async function getLeadById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const result = await db.select().from(leads).where(eq(leads.id, id)).limit(1);
+  return result[0] || null;
+}
