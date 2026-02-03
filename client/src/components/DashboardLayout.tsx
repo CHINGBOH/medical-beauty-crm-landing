@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Settings, BarChart3, MessageSquare, FileText, Users, BookOpen, Instagram, PanelLeft, LogOut } from "lucide-react";
+import { Settings, BarChart3, MessageSquare, FileText, Users, BookOpen, Instagram, Sparkles, PanelLeft, LogOut } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -29,6 +29,7 @@ import { Button } from "./ui/button";
 
 const menuItems = [
   { icon: Settings, label: "系统配置", path: "/dashboard/config" },
+  { icon: Sparkles, label: "AI 助手", path: "/dashboard/ai" },
   { icon: BarChart3, label: "数据分析", path: "/dashboard/analytics" },
   { icon: MessageSquare, label: "对话管理", path: "/dashboard/conversations" },
   { icon: BookOpen, label: "知识库管理", path: "/dashboard/knowledge" },

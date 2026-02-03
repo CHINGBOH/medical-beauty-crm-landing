@@ -9,6 +9,7 @@ import { knowledgeRouter } from "./routers/knowledge";
 import { contentRouter } from "./routers/content";
 import { customersRouter } from "./routers/customers";
 import { xiaohongshuRouter } from "./routers/xiaohongshu";
+import { adminAiRouter } from "./routers/admin-ai";
 
 export const appRouter = router({
   system: systemRouter,
@@ -29,6 +30,7 @@ export const appRouter = router({
   content: contentRouter,
   customers: customersRouter,
   xiaohongshu: xiaohongshuRouter,
+  adminAi: adminAiRouter,
 });
 
 export type AppRouter = typeof appRouter;
