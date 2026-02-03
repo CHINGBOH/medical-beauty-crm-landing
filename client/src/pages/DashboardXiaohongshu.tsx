@@ -2,7 +2,7 @@
  * 小红书运营管理页面
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,6 +19,7 @@ import {
   Trash2,
   Sparkles,
   ImageIcon,
+  Loader2,
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Input } from "@/components/ui/input";
@@ -70,6 +71,14 @@ export default function DashboardXiaohongshu() {
     status: "draft",
     scheduledAt: "",
   });
+
+  const imageList = useMemo(
+    () =>
+      formData.images
+        ? formData.images.split(",").map((t) => t.trim()).filter(Boolean)
+        : [],
+    [formData.images]
+  );
 
   // 获取统计数据
   const { data: stats, isLoading: statsLoading } = trpc.xiaohongshu.getStats.useQuery();
@@ -299,6 +308,23 @@ export default function DashboardXiaohongshu() {
     toast.success("图片已生成");
   };
 
+  const handleApplyOptions = () => {
+    const typeMap: Record<string, string> = {
+      project: "项目体验",
+      case: "效果对比",
+      price: "价格揭秘",
+      guide: "避坑指南",
+      holiday: "节日营销",
+    };
+    setFormData((prev) => ({
+      ...prev,
+      project: generateOptions.project || prev.project,
+      contentType: typeMap[generateOptions.type] || prev.contentType,
+      tags: prev.tags || generateOptions.keywords,
+    }));
+    toast.success("已同步到表单");
+  };
+
   const handleDelete = (id: number) => {
     if (!confirm("确定要删除该内容吗？")) return;
     deleteMutation.mutate({ id });
@@ -503,7 +529,7 @@ export default function DashboardXiaohongshu() {
         </CardContent>
       </Card>
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingId ? "编辑内容" : "创建新内容"}</DialogTitle>
             <DialogDescription>填写内容并保存为草稿或直接发布</DialogDescription>
@@ -638,8 +664,12 @@ export default function DashboardXiaohongshu() {
                     onClick={handleGenerateContent}
                     disabled={generateContentMutation.isPending}
                   >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    一键生成文案
+                    {generateContentMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4 mr-2" />
+                    )}
+                    {generateContentMutation.isPending ? "生成中..." : "一键生成文案"}
                   </Button>
                 </div>
               </div>
@@ -650,8 +680,15 @@ export default function DashboardXiaohongshu() {
                   onClick={handleGenerateImages}
                   disabled={generateImageMutation.isPending}
                 >
-                  <ImageIcon className="w-4 h-4 mr-2" />
-                  生成配图
+                  {generateImageMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <ImageIcon className="w-4 h-4 mr-2" />
+                  )}
+                  {generateImageMutation.isPending ? "生成中..." : "生成配图"}
+                </Button>
+                <Button variant="ghost" onClick={handleApplyOptions}>
+                  同步到表单
                 </Button>
                 <Badge variant="secondary">支持自动填充标题/正文/标签</Badge>
                 <Badge variant="outline">图片模型可后续切换</Badge>
@@ -738,6 +775,18 @@ export default function DashboardXiaohongshu() {
                 onChange={(e) => setFormData({ ...formData, images: e.target.value })}
                 placeholder="https://... , https://..."
               />
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span>已添加 {imageList.length} 张图片</span>
+                {imageList.length > 0 ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFormData({ ...formData, images: "" })}
+                  >
+                    清空图片
+                  </Button>
+                ) : null}
+              </div>
             </div>
           </div>
 

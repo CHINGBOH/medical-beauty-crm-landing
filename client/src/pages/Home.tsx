@@ -114,7 +114,7 @@ export default function Home() {
               <Button 
                 variant="ghost" 
                 size="sm"
-                onClick={() => setLocation("/admin")}
+                onClick={() => setLocation("/dashboard/admin")}
                 className="text-gray-500 hover:text-amber-600"
               >
                 管理

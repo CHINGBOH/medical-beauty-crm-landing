@@ -6,9 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Settings, Database, CheckCircle2, XCircle, Loader2, Activity } from "lucide-react";
-import DashboardLayout from "@/components/DashboardLayout";
 
 export default function Admin() {
+  const [isAuthed, setIsAuthed] = useState(false);
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
   const [airtableToken, setAirtableToken] = useState("");
   const [airtableBaseId, setAirtableBaseId] = useState("");
   const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
@@ -25,6 +27,14 @@ export default function Admin() {
     if (typeof window === "undefined") return "";
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     return `${protocol}://${window.location.host}/ws/queue-status`;
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.sessionStorage.getItem("admin-auth");
+    if (stored === "true") {
+      setIsAuthed(true);
+    }
   }, []);
 
   useEffect(() => {
@@ -142,14 +152,74 @@ export default function Admin() {
     }
   };
 
+  const handleUnlock = () => {
+    if (authPassword === "123456") {
+      setIsAuthed(true);
+      setAuthError("");
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem("admin-auth", "true");
+      }
+    } else {
+      setAuthError("密码错误，请重试");
+    }
+  };
+
+  const handleLock = () => {
+    setIsAuthed(false);
+    setAuthPassword("");
+    setAuthError("");
+    if (typeof window !== "undefined") {
+      window.sessionStorage.removeItem("admin-auth");
+    }
+  };
+
+  if (!isAuthed) {
+    return (
+      <div className="max-w-md mx-auto py-16">
+        <Card className="border-amber-100 shadow-lg">
+          <CardHeader>
+            <CardTitle>管理入口验证</CardTitle>
+            <CardDescription>请输入管理密码以继续</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="admin-password">管理密码</Label>
+              <Input
+                id="admin-password"
+                type="password"
+                value={authPassword}
+                onChange={(e) => setAuthPassword(e.target.value)}
+                placeholder="请输入密码"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleUnlock();
+                  }
+                }}
+              />
+              {authError ? <p className="text-sm text-red-600">{authError}</p> : null}
+              <p className="text-xs text-muted-foreground">默认密码：123456</p>
+            </div>
+            <Button className="w-full" onClick={handleUnlock}>
+              进入系统管理
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <DashboardLayout>
-      <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto">
           {/* 头部 */}
           <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <Settings className="w-8 h-8 text-amber-600" />
-              <h1 className="text-3xl font-bold text-gray-800">系统管理</h1>
+            <div className="flex items-center justify-between gap-3 mb-2">
+              <div className="flex items-center gap-3">
+                <Settings className="w-8 h-8 text-amber-600" />
+                <h1 className="text-3xl font-bold text-gray-800">系统管理</h1>
+              </div>
+              <Button variant="outline" size="sm" onClick={handleLock}>
+                锁定管理
+              </Button>
             </div>
             <p className="text-gray-600">配置和管理系统集成</p>
           </div>
@@ -345,6 +415,5 @@ export default function Admin() {
             </CardContent>
           </Card>
       </div>
-    </DashboardLayout>
   );
 }
