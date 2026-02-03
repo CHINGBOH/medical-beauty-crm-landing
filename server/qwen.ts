@@ -46,7 +46,7 @@ export async function callQwen(messages: QwenMessage[]): Promise<string> {
           "Content-Type": "application/json",
           Authorization: `Bearer ${QWEN_API_KEY}`,
         },
-        timeout: 30000,
+        timeout: 60000, // 增加超时时间到60秒
       }
     );
 
