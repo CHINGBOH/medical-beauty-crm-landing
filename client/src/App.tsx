@@ -1,28 +1,47 @@
-import { Router, Route } from 'wouter'
-import { DashboardLayout } from './components/layout/DashboardLayout'
-import { DashboardPage } from './pages/dashboard'
-import { ChatPage } from './pages/chat'
+import { Router, Route } from "wouter";
+import DashboardLayout from "./components/DashboardLayout";
+import Admin from "./pages/Admin";
+import Analytics from "./pages/Analytics";
+import Chat from "./pages/Chat";
+import DashboardAI from "./pages/DashboardAI";
+import DashboardAnalytics from "./pages/DashboardAnalytics";
+import DashboardConfig from "./pages/DashboardConfig";
+import DashboardContent from "./pages/DashboardContent";
+import DashboardConversations from "./pages/DashboardConversations";
+import DashboardCustomers from "./pages/DashboardCustomers";
+import DashboardKnowledge from "./pages/DashboardKnowledge";
+import DashboardQueue from "./pages/DashboardQueue";
+import DashboardRag from "./pages/DashboardRag";
+import DashboardTriggers from "./pages/DashboardTriggers";
+import DashboardWework from "./pages/DashboardWework";
+import DashboardXiaohongshu from "./pages/DashboardXiaohongshu";
+import Home from "./pages/Home";
 
 function App() {
   return (
     <Router>
-      <Route path="/chat" component={ChatPage} />
+      <Route path="/chat" component={Chat} />
       <Route path="/dashboard">
         <DashboardLayout>
-          <Route path="/" component={DashboardPage} />
-          <Route path="/analytics" component={() => <div>数据分析页面</div>} />
-          <Route path="/conversations" component={() => <div>对话管理页面</div>} />
-          <Route path="/knowledge" component={() => <div>知识库页面</div>} />
-          <Route path="/content" component={() => <div>内容生成页面</div>} />
-          <Route path="/customers" component={() => <div>客户管理页面</div>} />
-          <Route path="/xiaohongshu" component={() => <div>小红书运营页面</div>} />
-          <Route path="/triggers" component={() => <div>自动化触发页面</div>} />
-          <Route path="/config" component={() => <div>系统配置页面</div>} />
+          <Route path="/" component={Analytics} />
+          <Route path="/admin" component={Admin} />
+          <Route path="/ai" component={DashboardAI} />
+          <Route path="/analytics" component={DashboardAnalytics} />
+          <Route path="/conversations" component={DashboardConversations} />
+          <Route path="/knowledge" component={DashboardKnowledge} />
+          <Route path="/rag" component={DashboardRag} />
+          <Route path="/content" component={DashboardContent} />
+          <Route path="/customers" component={DashboardCustomers} />
+          <Route path="/xiaohongshu" component={DashboardXiaohongshu} />
+          <Route path="/triggers" component={DashboardTriggers} />
+          <Route path="/queue" component={DashboardQueue} />
+          <Route path="/wework" component={DashboardWework} />
+          <Route path="/config" component={DashboardConfig} />
         </DashboardLayout>
       </Route>
-      <Route path="/" component={() => <div>首页</div>} />
+      <Route path="/" component={Home} />
     </Router>
-  )
+  );
 }
 
-export default App
+export default App;

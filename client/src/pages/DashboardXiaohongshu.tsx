@@ -8,7 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Eye, Heart, MessageCircle, Share2, Bookmark, TrendingUp, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Eye,
+  Heart,
+  MessageCircle,
+  Share2,
+  Bookmark,
+  TrendingUp,
+  Trash2,
+  Sparkles,
+  ImageIcon,
+} from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -40,6 +51,15 @@ export default function DashboardXiaohongshu() {
   const [viewingPost, setViewingPost] = useState<any | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedFormatted, setCopiedFormatted] = useState(false);
+  const [generateOptions, setGenerateOptions] = useState({
+    type: "project",
+    tone: "enthusiastic",
+    project: "",
+    keywords: "",
+    imageStyle: "modern",
+    imageCount: 1,
+    model: "auto",
+  });
   const [formData, setFormData] = useState({
     title: "",
     content: "",
@@ -117,6 +137,27 @@ export default function DashboardXiaohongshu() {
     },
     onError: (error: any) => {
       toast.error("删除失败", { description: error.message });
+    },
+  });
+
+  const generateContentMutation = trpc.content.generate.useMutation({
+    onSuccess: (data) => {
+      setFormData((prev) => ({
+        ...prev,
+        title: data.title || prev.title,
+        content: data.content || prev.content,
+        tags: Array.isArray(data.tags) ? data.tags.join(",") : prev.tags,
+      }));
+      toast.success("已生成文案");
+    },
+    onError: (error: any) => {
+      toast.error("生成失败", { description: error.message });
+    },
+  });
+
+  const generateImageMutation = trpc.content.generateImage.useMutation({
+    onError: (error: any) => {
+      toast.error("图片生成失败", { description: error.message });
     },
   });
 
@@ -220,6 +261,42 @@ export default function DashboardXiaohongshu() {
     } else {
       createMutation.mutate(payload);
     }
+  };
+
+  const handleGenerateContent = () => {
+    const keywords = generateOptions.keywords
+      ? generateOptions.keywords.split(/[,，]/).map((k) => k.trim()).filter(Boolean)
+      : undefined;
+    generateContentMutation.mutate({
+      type: generateOptions.type as any,
+      project: generateOptions.project || undefined,
+      keywords,
+      tone: generateOptions.tone as any,
+    });
+  };
+
+  const handleGenerateImages = async () => {
+    if (!formData.title || !formData.content) {
+      toast.error("请先生成或填写标题与正文");
+      return;
+    }
+    const tasks = Array.from({ length: generateOptions.imageCount }, () =>
+      generateImageMutation.mutateAsync({
+        title: formData.title,
+        content: formData.content,
+        project: generateOptions.project || formData.project || undefined,
+        style: generateOptions.imageStyle as any,
+      })
+    );
+    const results = await Promise.all(tasks);
+    const urls = results.map((r) => r.url).filter(Boolean);
+    setFormData((prev) => ({
+      ...prev,
+      images: [...(prev.images ? prev.images.split(",").map((t) => t.trim()) : []), ...urls].join(
+        ","
+      ),
+    }));
+    toast.success("图片已生成");
   };
 
   const handleDelete = (id: number) => {
@@ -431,6 +508,156 @@ export default function DashboardXiaohongshu() {
             <DialogTitle>{editingId ? "编辑内容" : "创建新内容"}</DialogTitle>
             <DialogDescription>填写内容并保存为草稿或直接发布</DialogDescription>
           </DialogHeader>
+
+          <Card className="border-dashed">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                智能生成选项
+              </CardTitle>
+              <CardDescription>选择模板与风格，一键生成文案与配图</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label>文案模板</Label>
+                  <Select
+                    value={generateOptions.type}
+                    onValueChange={(v) => setGenerateOptions({ ...generateOptions, type: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="project">项目体验</SelectItem>
+                      <SelectItem value="case">效果对比</SelectItem>
+                      <SelectItem value="price">价格揭秘</SelectItem>
+                      <SelectItem value="guide">避坑指南</SelectItem>
+                      <SelectItem value="holiday">节日营销</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>文字风格</Label>
+                  <Select
+                    value={generateOptions.tone}
+                    onValueChange={(v) => setGenerateOptions({ ...generateOptions, tone: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="enthusiastic">热情种草</SelectItem>
+                      <SelectItem value="professional">专业权威</SelectItem>
+                      <SelectItem value="casual">轻松聊天</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>医美主题</Label>
+                  <Input
+                    value={generateOptions.project}
+                    onChange={(e) =>
+                      setGenerateOptions({ ...generateOptions, project: e.target.value })
+                    }
+                    placeholder="如：超皮秒、水光针"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-2 md:col-span-2">
+                  <Label>关键词（逗号分隔）</Label>
+                  <Input
+                    value={generateOptions.keywords}
+                    onChange={(e) =>
+                      setGenerateOptions({ ...generateOptions, keywords: e.target.value })
+                    }
+                    placeholder="效果对比,术后护理,真实体验"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>图片生成模型</Label>
+                  <Select
+                    value={generateOptions.model}
+                    onValueChange={(v) => setGenerateOptions({ ...generateOptions, model: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">智能匹配</SelectItem>
+                      <SelectItem value="model-a">模型 A（待定）</SelectItem>
+                      <SelectItem value="model-b">模型 B（待定）</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label>图片风格</Label>
+                  <Select
+                    value={generateOptions.imageStyle}
+                    onValueChange={(v) => setGenerateOptions({ ...generateOptions, imageStyle: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="modern">现代简约</SelectItem>
+                      <SelectItem value="elegant">高奢质感</SelectItem>
+                      <SelectItem value="vibrant">活力明亮</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>图片数量</Label>
+                  <Select
+                    value={String(generateOptions.imageCount)}
+                    onValueChange={(v) =>
+                      setGenerateOptions({ ...generateOptions, imageCount: Number(v) })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4].map((count) => (
+                        <SelectItem key={count} value={String(count)}>
+                          {count} 张
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleGenerateContent}
+                    disabled={generateContentMutation.isPending}
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    一键生成文案
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={handleGenerateImages}
+                  disabled={generateImageMutation.isPending}
+                >
+                  <ImageIcon className="w-4 h-4 mr-2" />
+                  生成配图
+                </Button>
+                <Badge variant="secondary">支持自动填充标题/正文/标签</Badge>
+                <Badge variant="outline">图片模型可后续切换</Badge>
+              </div>
+            </CardContent>
+          </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
