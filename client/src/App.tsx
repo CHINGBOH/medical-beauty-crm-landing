@@ -24,6 +24,7 @@ function Router() {
       <Route path={"/chat"} component={Chat} />
       <Route path={"/admin"} component={Admin} />
       <Route path={"/analytics"} component={Analytics} />
+      <Route path={"/dashboard/admin"} component={Admin} />
       <Route path={"/dashboard/config"} component={DashboardConfig} />
       <Route path={"/dashboard/analytics"} component={DashboardAnalytics} />
       <Route path={"/dashboard/conversations"} component={DashboardConversations} />

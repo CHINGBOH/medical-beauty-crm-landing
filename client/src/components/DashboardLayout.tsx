@@ -21,14 +21,14 @@ import {
 } from "@/components/ui/sidebar";
 import { getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { Settings, BarChart3, MessageSquare, FileText, Users, BookOpen, Instagram, Sparkles, PanelLeft, LogOut } from "lucide-react";
+import { Settings, BarChart3, MessageSquare, FileText, Users, BookOpen, Instagram, Sparkles, PanelLeft, LogOut, Cog } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
 const menuItems = [
-  { icon: Settings, label: "系统配置", path: "/dashboard/config" },
+  { icon: Cog, label: "系统管理", path: "/dashboard/admin" },
   { icon: Sparkles, label: "AI 助手", path: "/dashboard/ai" },
   { icon: BarChart3, label: "数据分析", path: "/dashboard/analytics" },
   { icon: MessageSquare, label: "对话管理", path: "/dashboard/conversations" },
@@ -58,35 +58,36 @@ export default function DashboardLayout({
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());
   }, [sidebarWidth]);
 
-  if (loading) {
-    return <DashboardLayoutSkeleton />
-  }
+  // 测试阶段：移除身份验证
+  // if (loading) {
+  //   return <DashboardLayoutSkeleton />
+  // }
 
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
-          <div className="flex flex-col items-center gap-6">
-            <h1 className="text-2xl font-semibold tracking-tight text-center">
-              Sign in to continue
-            </h1>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
-              Access to this dashboard requires authentication. Continue to launch the login flow.
-            </p>
-          </div>
-          <Button
-            onClick={() => {
-              window.location.href = getLoginUrl();
-            }}
-            size="lg"
-            className="w-full shadow-lg hover:shadow-xl transition-all"
-          >
-            Sign in
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // if (!user) {
+  //   return (
+  //     <div className="flex items-center justify-center min-h-screen">
+  //       <div className="flex flex-col items-center gap-8 p-8 max-w-md w-full">
+  //         <div className="flex flex-col items-center gap-6">
+  //           <h1 className="text-2xl font-semibold tracking-tight text-center">
+  //             Sign in to continue
+  //           </h1>
+  //           <p className="text-sm text-muted-foreground text-center max-w-sm">
+  //             Access to this dashboard requires authentication. Continue to launch the login flow.
+  //           </p>
+  //         </div>
+  //         <Button
+  //           onClick={() => {
+  //             window.location.href = getLoginUrl();
+  //           }}
+  //           size="lg"
+  //           className="w-full shadow-lg hover:shadow-xl transition-all"
+  //         >
+  //           Sign in
+  //         </Button>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   return (
     <SidebarProvider
