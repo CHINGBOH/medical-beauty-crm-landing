@@ -7,6 +7,7 @@ import { setupAirtableCRM } from "../airtable-setup";
 
 export const adminRouter = router({
   /**
+   * 保存 Airtable 配置
    */
   saveAirtableConfig: publicProcedure
     .input(
@@ -51,6 +52,7 @@ export const adminRouter = router({
     }),
 
   /**
+   * 获取 Airtable 配置
    */
   getAirtableConfig: publicProcedure.query(async () => {
     const db = await getDb();
@@ -78,6 +80,7 @@ export const adminRouter = router({
   }),
 
   /**
+   * 测试 Airtable 连接
    */
   testAirtableConnection: publicProcedure
     .input(
@@ -119,6 +122,7 @@ export const adminRouter = router({
     }),
 
   /**
+   * 自动设置 Airtable CRM 表结构
    */
   setupAirtableTables: publicProcedure
     .input(

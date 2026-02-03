@@ -1,4 +1,6 @@
 /**
+ * Airtable API 集成工具
+ * 用于与 Airtable 进行数据同步
  */
 
 import { getDb } from "./db";
@@ -8,6 +10,7 @@ import { eq } from "drizzle-orm";
 const AIRTABLE_API_URL = "https://api.airtable.com/v0";
 
 /**
+ * 从数据库获取 Airtable 配置
  */
 async function getAirtableConfig(): Promise<{ token: string; baseId: string } | null> {
   const db = await getDb();
@@ -42,6 +45,7 @@ interface AirtableResponse {
 }
 
 /**
+ * 创建 Airtable 记录
  */
 export async function createAirtableRecord(
   tableName: string,
@@ -49,12 +53,7 @@ export async function createAirtableRecord(
 ): Promise<AirtableRecord> {
   const config = await getAirtableConfig();
   if (!config) {
-    console.warn("[Airtable] Configuration not found, create skipped");
-    return {
-      id: "local-only",
-      fields,
-      createdTime: new Date().toISOString(),
-    };
+    throw new Error("Airtable credentials not configured");
   }
 
   const url = `${AIRTABLE_API_URL}/${config.baseId}/${encodeURIComponent(tableName)}`;
@@ -80,6 +79,7 @@ export async function createAirtableRecord(
 }
 
 /**
+ * 获取 Airtable 记录
  */
 export async function getAirtableRecords(
   tableName: string,
@@ -88,8 +88,7 @@ export async function getAirtableRecords(
 ): Promise<AirtableRecord[]> {
   const config = await getAirtableConfig();
   if (!config) {
-    console.warn("[Airtable] Configuration not found, fetch skipped");
-    return [];
+    throw new Error("Airtable credentials not configured");
   }
 
   const params = new URLSearchParams();
@@ -115,6 +114,7 @@ export async function getAirtableRecords(
 }
 
 /**
+ * 更新 Airtable 记录
  */
 export async function updateAirtableRecord(
   tableName: string,
@@ -123,12 +123,7 @@ export async function updateAirtableRecord(
 ): Promise<AirtableRecord> {
   const config = await getAirtableConfig();
   if (!config) {
-    console.warn("[Airtable] Configuration not found, update skipped");
-    return {
-      id: recordId,
-      fields,
-      createdTime: new Date().toISOString(),
-    };
+    throw new Error("Airtable credentials not configured");
   }
 
   const url = `${AIRTABLE_API_URL}/${config.baseId}/${encodeURIComponent(tableName)}/${recordId}`;
@@ -153,6 +148,7 @@ export async function updateAirtableRecord(
 }
 
 /**
+ * 创建线索到 Airtable
  */
 export async function createLeadInAirtable(leadData: {
   name: string;
@@ -184,6 +180,7 @@ export async function createLeadInAirtable(leadData: {
 }
 
 /**
+ * 获取线索列表
  */
 export async function getLeadsFromAirtable(status?: string): Promise<AirtableRecord[]> {
   let filterFormula = "";
@@ -194,6 +191,7 @@ export async function getLeadsFromAirtable(status?: string): Promise<AirtableRec
 }
 
 /**
+ * 更新线索状态
  */
 export async function updateLeadStatus(
   recordId: string,
@@ -205,6 +203,7 @@ export async function updateLeadStatus(
 }
 
 /**
+ * 将对话同步到 Airtable
  */
 export async function syncConversationToAirtable(conversationData: {
   sessionId: string;
@@ -247,6 +246,7 @@ export async function syncConversationToAirtable(conversationData: {
 }
 
 /**
+ * 从 Airtable 读取客户历史记录
  */
 export async function getCustomerHistoryFromAirtable(phone: string): Promise<{
   leads: AirtableRecord[];
@@ -263,12 +263,14 @@ export async function getCustomerHistoryFromAirtable(phone: string): Promise<{
     const leads = await getAirtableRecords(
       "线索池",
       `{手机号} = '${phone}'`,
+      10
     );
 
     // 获取客户的对话记录
     const conversations = await getAirtableRecords(
       "对话记录",
       `{访客手机} = '${phone}'`,
+      10
     );
 
     return { leads, conversations };
@@ -279,6 +281,7 @@ export async function getCustomerHistoryFromAirtable(phone: string): Promise<{
 }
 
 /**
+ * 更新 Airtable 中的客户画像
  */
 export async function updateCustomerProfileInAirtable(
   recordId: string,

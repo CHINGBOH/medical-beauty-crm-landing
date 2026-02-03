@@ -1,7 +1,12 @@
 /**
+ * Image generation helper using internal ImageService
+ *
+ * Example usage:
  *   const { url: imageUrl } = await generateImage({
  *     prompt: "A serene landscape with mountains"
  *   });
+ *
+ * For editing:
  *   const { url: imageUrl } = await generateImage({
  *     prompt: "Add a rainbow to this landscape",
  *     originalImages: [{

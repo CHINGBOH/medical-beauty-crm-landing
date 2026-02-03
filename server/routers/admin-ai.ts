@@ -6,10 +6,13 @@ import { leads, conversations, messages, knowledgeBase } from "../../drizzle/sch
 import { eq, and, gte, lte, like, sql, desc } from "drizzle-orm";
 
 /**
+ * 管理端 AI 助手 Router
+ * 让管理员可以用自然语言查询数据库
  */
 
 export const adminAiRouter = router({
   /**
+   * AI 查询数据库
    */
   query: protectedProcedure
     .input(
@@ -25,11 +28,38 @@ export const adminAiRouter = router({
         messages: [
           {
             role: "system",
+            content: `你是一个医美 CRM 系统的数据分析助手。你的任务是理解管理员的自然语言问题，并生成查询计划。
 
+数据库表结构：
+1. leads（客户线索表）
+   - name: 姓名
+   - phone: 手机号
+   - wechat: 微信号
+   - source: 来源渠道（小红书、抖音、微信朋友圈等）
+   - interestedServices: 兴趣项目（JSON数组）
+   - budget: 预算
+   - psychologyType: 心理类型（fear恐惧型、greed贪婪型、safety安全型、sensitive敏感型）
+   - consumptionLevel: 消费能力（low低、medium中、high高）
+   - customerTier: 客户分层（A、B、C、D）
+   - psychologyTags: 心理标签（JSON数组）
+   - createdAt: 创建时间
 
+2. conversations（对话会话表）
+   - visitorName: 访客姓名
+   - visitorPhone: 访客手机
+   - messageCount: 消息数量
+   - detectedPsychologyType: 检测到的心理类型
+   - detectedMotivations: 检测到的动机（JSON数组）
+   - createdAt: 创建时间
 
+3. knowledge_base（知识库表）
+   - title: 标题
+   - content: 内容
+   - category: 分类
    - type: 类型（customer_inquiry客户问询、internal_management内部管理）
+   - usageCount: 使用次数
 
+请分析用户问题，返回 JSON 格式的查询计划：
 {
   "queryType": "客户查询 | 对话查询 | 统计查询 | 知识库查询",
   "tables": ["需要查询的表"],
@@ -139,6 +169,7 @@ export const adminAiRouter = router({
     }),
 
   /**
+   * 获取 AI 助手对话历史
    */
   getHistory: protectedProcedure.query(async () => {
     // TODO: 实现对话历史记录

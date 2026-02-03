@@ -1,8 +1,9 @@
 /**
+ * 小红书运营管理 Router
  */
 
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../_core/trpc";
 import {
   getAllXiaohongshuPosts,
   getXiaohongshuPostById,
@@ -17,8 +18,9 @@ import { eq, sql } from "drizzle-orm";
 
 export const xiaohongshuRouter = router({
   /**
+   * 获取所有小红书内容
    */
-  getPosts: publicProcedure
+  getPosts: protectedProcedure
     .input(
       z.object({
         status: z.enum(["draft", "scheduled", "published", "deleted"]).optional(),
@@ -46,16 +48,18 @@ export const xiaohongshuRouter = router({
     }),
 
   /**
+   * 获取单个小红书内容详情
    */
-  getPost: publicProcedure
+  getPost: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       return await getXiaohongshuPostById(input.id);
     }),
 
   /**
+   * 创建小红书内容
    */
-  createPost: publicProcedure
+  createPost: protectedProcedure
     .input(
       z.object({
         title: z.string(),
@@ -82,8 +86,9 @@ export const xiaohongshuRouter = router({
     }),
 
   /**
+   * 更新小红书内容
    */
-  updatePost: publicProcedure
+  updatePost: protectedProcedure
     .input(
       z.object({
         id: z.number(),
@@ -110,16 +115,18 @@ export const xiaohongshuRouter = router({
     }),
 
   /**
+   * 删除小红书内容
    */
-  deletePost: publicProcedure
+  deletePost: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ input }) => {
       return await updateXiaohongshuPost(input.id, { status: "deleted" });
     }),
 
   /**
+   * 更新小红书内容数据（阅读量、点赞等）
    */
-  updatePostStats: publicProcedure
+  updatePostStats: protectedProcedure
     .input(
       z.object({
         id: z.number(),
@@ -140,8 +147,9 @@ export const xiaohongshuRouter = router({
     }),
 
   /**
+   * 获取小红书内容的评论
    */
-  getComments: publicProcedure
+  getComments: protectedProcedure
     .input(
       z.object({
         postId: z.number(),
@@ -153,8 +161,9 @@ export const xiaohongshuRouter = router({
     }),
 
   /**
+   * 回复评论
    */
-  replyComment: publicProcedure
+  replyComment: protectedProcedure
     .input(
       z.object({
         id: z.number(),
@@ -166,8 +175,9 @@ export const xiaohongshuRouter = router({
     }),
 
   /**
+   * 获取数据统计
    */
-  getStats: publicProcedure.query(async () => {
+  getStats: protectedProcedure.query(async () => {
     const db = await getDb();
     if (!db) throw new Error("Database not available");
     

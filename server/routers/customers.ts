@@ -1,18 +1,20 @@
 import { z } from "zod";
-import { publicProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../_core/trpc";
 import { getAllLeads, getLeadById } from "../db";
 
 export const customersRouter = router({
   /**
+   * 获取客户列表
    */
-  list: publicProcedure.query(async () => {
+  list: protectedProcedure.query(async () => {
     const leads = await getAllLeads();
     return leads;
   }),
 
   /**
+   * 获取客户详情
    */
-  getById: publicProcedure
+  getById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ input }) => {
       const lead = await getLeadById(input.id);
@@ -20,8 +22,9 @@ export const customersRouter = router({
     }),
 
   /**
+   * 获取客户统计
    */
-  stats: publicProcedure.query(async () => {
+  stats: protectedProcedure.query(async () => {
     const leads = await getAllLeads();
     
     return {

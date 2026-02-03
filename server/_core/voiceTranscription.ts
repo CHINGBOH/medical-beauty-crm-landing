@@ -1,5 +1,13 @@
 /**
+ * Voice transcription helper using internal Speech-to-Text service
+ *
+ * Frontend implementation guide:
+ * 1. Capture audio using MediaRecorder API
  * 2. Upload audio to storage (e.g., S3) to get URL
+ * 3. Call transcription with the URL
+ * 
+ * Example usage:
+ * ```tsx
  * // Frontend component
  * const transcribeMutation = trpc.voice.transcribe.useMutation({
  *   onSuccess: (data) => {
@@ -8,11 +16,14 @@
  *     console.log(data.segments); // Timestamped segments
  *   }
  * });
+ * 
  * // After uploading audio to storage
  * transcribeMutation.mutate({
+ *   audioUrl: uploadedAudioUrl,
  *   language: 'en', // optional
  *   prompt: 'Transcribe the meeting' // optional
  * });
+ * ```
  */
 import { ENV } from "./env";
 
@@ -54,6 +65,10 @@ export type TranscriptionError = {
 };
 
 /**
+ * Transcribe audio to text using the internal Speech-to-Text service
+ * 
+ * @param options - Audio data and metadata
+ * @returns Transcription result or error
  */
 export async function transcribeAudio(
   options: TranscribeOptions
@@ -227,9 +242,14 @@ function getLanguageName(langCode: string): string {
 }
 
 /**
+ * Example tRPC procedure implementation:
+ * 
+ * ```ts
  * // In server/routers.ts
  * import { transcribeAudio } from "./_core/voiceTranscription";
+ * 
  * export const voiceRouter = router({
+ *   transcribe: protectedProcedure
  *     .input(z.object({
  *       audioUrl: z.string(),
  *       language: z.string().optional(),
@@ -237,17 +257,28 @@ function getLanguageName(langCode: string): string {
  *     }))
  *     .mutation(async ({ input, ctx }) => {
  *       const result = await transcribeAudio(input);
+ *       
  *       // Check if it's an error
  *       if ('error' in result) {
  *         throw new TRPCError({
  *           code: 'BAD_REQUEST',
+ *           message: result.error,
+ *           cause: result,
  *         });
  *       }
+ *       
  *       // Optionally save transcription to database
  *       await db.insert(transcriptions).values({
+ *         userId: ctx.user.id,
+ *         text: result.text,
+ *         duration: result.duration,
+ *         language: result.language,
+ *         audioUrl: input.audioUrl,
  *         createdAt: new Date(),
  *       });
+ *       
  *       return result;
  *     }),
  * });
+ * ```
  */

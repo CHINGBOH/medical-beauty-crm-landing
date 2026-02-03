@@ -214,17 +214,11 @@ const resolveApiUrl = () =>
     ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
     : "https://forge.manus.im/v1/chat/completions";
 
-const shouldUseOllama = () =>
-  typeof ENV.ollamaBaseUrl === "string" && ENV.ollamaBaseUrl.trim().length > 0;
-
 const assertApiKey = () => {
   if (!ENV.forgeApiKey) {
-    throw new Error("BUILT_IN_FORGE_API_KEY is not configured");
+    throw new Error("OPENAI_API_KEY is not configured");
   }
 };
-
-const resolveOllamaUrl = () =>
-  `${ENV.ollamaBaseUrl.replace(/\/$/, "")}/api/chat`;
 
 const normalizeResponseFormat = ({
   responseFormat,
@@ -272,6 +266,8 @@ const normalizeResponseFormat = ({
 };
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
+  assertApiKey();
+
   const {
     messages,
     tools,
@@ -283,61 +279,9 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     response_format,
   } = params;
 
-  const normalizedMessages = messages.map(normalizeMessage);
-
-  if (shouldUseOllama()) {
-    const response = await fetch(resolveOllamaUrl(), {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: ENV.ollamaModel,
-        stream: false,
-        messages: normalizedMessages.map(msg => ({
-          role: msg.role,
-          content:
-            typeof msg.content === "string" ? msg.content : JSON.stringify(msg.content),
-        })),
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Ollama invoke failed: ${response.status} ${response.statusText} – ${errorText}`
-      );
-    }
-
-    const data = await response.json();
-    const content = data?.message?.content ?? "";
-
-    return {
-      id: data?.id ?? "ollama",
-      created: Math.floor(Date.now() / 1000),
-      model: ENV.ollamaModel,
-      choices: [
-        {
-          index: 0,
-          message: { role: "assistant", content },
-          finish_reason: data?.done ? "stop" : null,
-        },
-      ],
-      usage: data?.prompt_eval_count && data?.eval_count
-        ? {
-            prompt_tokens: data.prompt_eval_count,
-            completion_tokens: data.eval_count,
-            total_tokens: data.prompt_eval_count + data.eval_count,
-          }
-        : undefined,
-    };
-  }
-
-  assertApiKey();
-
   const payload: Record<string, unknown> = {
     model: "gemini-2.5-flash",
-    messages: normalizedMessages,
+    messages: messages.map(normalizeMessage),
   };
 
   if (tools && tools.length > 0) {
@@ -352,10 +296,10 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     payload.tool_choice = normalizedToolChoice;
   }
 
-  payload.max_tokens = 32768;
+  payload.max_tokens = 32768
   payload.thinking = {
-    budget_tokens: 128,
-  };
+    "budget_tokens": 128
+  }
 
   const normalizedResponseFormat = normalizeResponseFormat({
     responseFormat,

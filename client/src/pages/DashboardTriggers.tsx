@@ -5,83 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Zap, Clock, Activity, Cloud, Plus, Play, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import DashboardLayout from "@/components/DashboardLayout";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 export default function DashboardTriggers() {
   const [selectedType, setSelectedType] = useState<"time" | "behavior" | "weather" | "all">("all");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    type: "time" as "time" | "behavior" | "weather",
-    description: "",
-    condition: "",
-    action: "",
-    enabled: true,
-  });
 
   const { data: triggers, isLoading, refetch } = trpc.triggers.list.useQuery();
   const executeMutation = trpc.triggers.execute.useMutation();
   const deleteMutation = trpc.triggers.delete.useMutation();
-  const createMutation = trpc.triggers.create.useMutation({
-    onSuccess: () => {
-      toast.success("触发器创建成功");
-      refetch();
-      setDialogOpen(false);
-      setFormData({
-        name: "",
-        type: "time",
-        description: "",
-        condition: "",
-        action: "",
-        enabled: true,
-      });
-    },
-    onError: (error: any) => {
-      toast.error("创建失败", { description: error.message });
-    },
-  });
-  const generateConditionMutation = trpc.triggers.generateCondition.useMutation({
-    onSuccess: (data) => {
-      setFormData((prev) => ({
-        ...prev,
-        condition: JSON.stringify(data, null, 2),
-      }));
-      toast.success("条件已生成");
-    },
-    onError: (error: any) => {
-      toast.error("生成失败", { description: error.message });
-    },
-  });
-  const generateActionMutation = trpc.triggers.generateCondition.useMutation({
-    onSuccess: (data) => {
-      setFormData((prev) => ({
-        ...prev,
-        action: JSON.stringify(data, null, 2),
-      }));
-      toast.success("动作已生成");
-    },
-    onError: (error: any) => {
-      toast.error("生成失败", { description: error.message });
-    },
-  });
 
   const filteredTriggers = triggers?.filter(
     (t) => selectedType === "all" || t.type === selectedType
@@ -113,25 +43,6 @@ export default function DashboardTriggers() {
         description: error.message,
       });
     }
-  };
-
-  const handleCreate = () => {
-    if (!formData.name.trim()) {
-      toast.error("请输入触发器名称");
-      return;
-    }
-    if (!formData.condition.trim() || !formData.action.trim()) {
-      toast.error("请输入触发条件与动作");
-      return;
-    }
-
-    createMutation.mutate({
-      name: formData.name,
-      type: formData.type,
-      condition: formData.condition,
-      action: formData.action,
-      enabled: formData.enabled,
-    });
   };
 
   const getTypeIcon = (type: string) => {
@@ -172,7 +83,6 @@ export default function DashboardTriggers() {
   }
 
   return (
-    <DashboardLayout>
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
@@ -181,7 +91,7 @@ export default function DashboardTriggers() {
             配置基于时间、行为和天气的自动化营销触发规则
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button>
           <Plus className="h-4 w-4 mr-2" />
           创建触发器
         </Button>
@@ -235,114 +145,6 @@ export default function DashboardTriggers() {
           </CardContent>
         </Card>
       </div>
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>创建触发器</DialogTitle>
-            <DialogDescription>
-              配置触发条件与动作（JSON 字符串）
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>触发器名称</Label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="如：节假日回访提醒"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>触发描述（用于 AI 生成）</Label>
-              <Textarea
-                rows={3}
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="例如：节假日当天上午 9 点给 A/B 类客户发送关怀消息"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>触发类型</Label>
-              <Select
-                value={formData.type}
-                onValueChange={(v) => setFormData({ ...formData, type: v as any })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="time">时间触发</SelectItem>
-                  <SelectItem value="behavior">行为触发</SelectItem>
-                  <SelectItem value="weather">天气触发</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>触发条件（JSON）</Label>
-              <Textarea
-                rows={4}
-                value={formData.condition}
-                onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
-                placeholder='{"type":"holiday","schedule":"0 9 * * *","target":"A,B"}'
-              />
-              <div className="flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    generateConditionMutation.mutate({
-                      type: formData.type,
-                      description: formData.description || formData.name || "根据描述生成触发条件",
-                    })
-                  }
-                  disabled={generateConditionMutation.isPending}
-                >
-                  {generateConditionMutation.isPending ? "生成中..." : "AI 生成条件"}
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>动作配置（JSON）</Label>
-              <Textarea
-                rows={4}
-                value={formData.action}
-                onChange={(e) => setFormData({ ...formData, action: e.target.value })}
-                placeholder='{"type":"send_message","message":"节日关怀提醒"}'
-              />
-              <div className="flex justify-end">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    generateActionMutation.mutate({
-                      type: formData.type,
-                      description: formData.description || formData.name || "根据描述生成动作配置",
-                    })
-                  }
-                  disabled={generateActionMutation.isPending}
-                >
-                  {generateActionMutation.isPending ? "生成中..." : "AI 生成动作"}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              取消
-            </Button>
-            <Button onClick={handleCreate} disabled={createMutation.isPending}>
-              创建
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* 筛选按钮 */}
       <div className="flex gap-2">
@@ -468,6 +270,5 @@ export default function DashboardTriggers() {
         </CardContent>
       </Card>
     </div>
-    </DashboardLayout>
   );
 }

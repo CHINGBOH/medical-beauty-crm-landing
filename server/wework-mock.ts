@@ -1,4 +1,6 @@
 /**
+ * 企业微信模拟 API
+ * 用于在认证期间测试功能，无需真实企业微信账号
  */
 
 import { getWeworkConfig, updateAccessToken } from "./wework-db";
