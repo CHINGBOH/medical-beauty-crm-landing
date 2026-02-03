@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Sparkles, Copy, Check, Plus, X } from "lucide-react";
+import { Loader2, Sparkles, Copy, Check, Plus, X, Image as ImageIcon } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -21,6 +21,18 @@ export default function DashboardContent() {
   const [keywords, setKeywords] = useState<string[]>([]);
   const [keywordInput, setKeywordInput] = useState("");
   const [copied, setCopied] = useState(false);
+  const [imageStyle, setImageStyle] = useState<"modern" | "elegant" | "vibrant">("modern");
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+
+  const generateImageMutation = trpc.content.generateImage.useMutation({
+    onSuccess: (data) => {
+      setGeneratedImage(data.url || null);
+      toast.success("图片生成成功！");
+    },
+    onError: (error) => {
+      toast.error(`图片生成失败：${error.message}`);
+    },
+  });
 
   const generateMutation = trpc.content.generate.useMutation({
     onSuccess: () => {
@@ -226,6 +238,60 @@ export default function DashboardContent() {
                         {tag}
                       </Badge>
                     ))}
+                  </div>
+                </div>
+
+                {/* 图片生成 */}
+                <div>
+                  <div className="text-sm font-medium mb-2">配图</div>
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <Select value={imageStyle} onValueChange={(v) => setImageStyle(v as any)}>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="modern">现代简约</SelectItem>
+                          <SelectItem value="elegant">优雅高级</SelectItem>
+                          <SelectItem value="vibrant">活力鲜艳</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        onClick={() => {
+                          if (generateMutation.data) {
+                            generateImageMutation.mutate({
+                              title: generateMutation.data.title,
+                              content: generateMutation.data.content,
+                              project: project || undefined,
+                              style: imageStyle,
+                            });
+                          }
+                        }}
+                        disabled={generateImageMutation.isPending}
+                        variant="outline"
+                      >
+                        {generateImageMutation.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            生成中...
+                          </>
+                        ) : (
+                          <>
+                            <ImageIcon className="w-4 h-4 mr-2" />
+                            生成配图
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    {generatedImage && (
+                      <div className="relative rounded-lg overflow-hidden border">
+                        <img
+                          src={generatedImage}
+                          alt="Generated image"
+                          className="w-full h-auto"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 

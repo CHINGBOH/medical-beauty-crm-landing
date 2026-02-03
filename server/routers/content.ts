@@ -2,6 +2,7 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { getActiveKnowledge } from "../db";
+import { generateImage } from "../_core/imageGeneration";
 
 const CONTENT_GENERATION_PROMPT = `你是一位专业的小红书医美内容创作者，擅长撰写吸引人的医美项目推广文案。
 
@@ -156,5 +157,57 @@ export const contentRouter = router({
       };
     }),
 
+  /**
+   * 为内容生成配图
+   */
+  generateImage: protectedProcedure
+    .input(
+      z.object({
+        title: z.string(),
+        content: z.string(),
+        project: z.string().optional(),
+        style: z.enum(["modern", "elegant", "vibrant"]).optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const { title, content, project, style = "modern" } = input;
 
+      // 构建图片生成 prompt
+      const styleMap = {
+        modern: "现代简约风格，干净清爽的背景，柔和的色调",
+        elegant: "优雅高级风格，奢华质感，金色或粉色调",
+        vibrant: "活力鲜艳风格，明亮色彩，年轻时尚",
+      };
+
+      const imagePrompt = `Create a professional medical beauty promotional image for Xiaohongshu (Little Red Book). 
+
+Project: ${project || "medical beauty"}
+Title: ${title}
+
+Style: ${styleMap[style]}
+
+Requirements:
+- Clean, professional medical aesthetics
+- Include subtle medical beauty elements (like skincare products, treatment equipment)
+- Warm, inviting atmosphere
+- High-end, trustworthy visual style
+- Suitable for social media sharing
+- No text or Chinese characters in the image
+- Focus on beauty, health, and confidence
+
+Color palette: Soft pinks, whites, golds, or pastels depending on the style.`;
+
+      try {
+        const result = await generateImage({
+          prompt: imagePrompt,
+        });
+
+        return {
+          url: result.url,
+        };
+      } catch (error) {
+        console.error("Image generation failed:", error);
+        throw new Error("图片生成失败，请稍后重试");
+      }
+    }),
 });
