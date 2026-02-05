@@ -1,318 +1,248 @@
-# 医美智能营销管理系统 - 完整实施计划
+# 医美 CRM 落地增补实施方案（PostgreSQL 版本）
 
-## 系统概述
+> 说明：基于当前仓库已有 CRM、内容营销、AI 对话能力，补齐数据库升级、预约排期、AI 复盘、登录注册、短信通知、集成测试等能力。Airtable 当前仅为试用工具，本方案将其降级为“可选导入源”，核心业务数据统一沉淀到 PostgreSQL。企业微信“真实接入”本轮暂缓，仅预留接口与开关。
 
-本系统是一套完整的医美行业智能营销管理解决方案，整合了客户关系管理（CRM）、内容营销、自动化触发、数据分析等核心功能，旨在实现从公域引流到私域转化的全流程智能化管理。
+## 0. 架构要点与技术栈（优化版）
 
-## 核心功能模块
+### 0.1 架构要点（架构师视角）
 
-### 1. 统一管理后台（Dashboard）
-- 侧边栏导航（配置、分析、对话、内容、客户）
-- 数据概览看板
-- 快捷操作入口
+- **单体优先，模块化分层**：保持当前 Node.js + React 单体架构，按领域拆分模块（CRM、Content、Conversation、Schedule、Auth、Notification、Review）。
+- **事件驱动与异步优先**：长耗时任务统一走队列（短信发送、AI 复盘、批量提醒、向量化）。
+- **可观测性内建**：统一结构化日志（request_id / tenant_id / user_id / trace_id），并埋点核心业务指标。
+- **数据一致性分层**：交易链路（预约、注册、支付前后状态）强一致；分析链路（复盘、报表）弱一致；检索链路（向量召回）最终一致。
+- **高并发确定性**：写接口支持 `Idempotency-Key`，消息投递采用 outbox + 重试 + 去重。
+- **灰度与可回滚发布**：新能力全部加 feature flag（如 `enable_new_auth`, `enable_sms`），支持按门店灰度。
 
-### 2. 客户生命周期管理（CLM）
-- 客户画像（基础信息 + 心理标签）
-- 客户分层分级（VIP/潜力/普通/流失）
-- 消费周期追踪
-- 重要事件关切
+### 0.2 技术栈（推荐组合）
 
-### 3. 自动化营销触发系统
-- 时间触发（生日、节假日、回访、复购）
-- 行为触发（流失预警、高价值识别）
-- 天气触发（降温、台风、高温、空气质量）
+- 后端：TypeScript + Node.js（保持现有 Express/tRPC）
+- API：REST + OpenAPI（兼容现有 tRPC）
+- 数据库：**PostgreSQL 15+ + pgvector**（替换当前 MySQL/TiDB 路径）
+- 缓存与队列：Redis + BullMQ
+- 搜索：先用 PostgreSQL FTS，后续可接 OpenSearch
+- 对象存储：S3 兼容
+- 前端：React + Vite（保持现状）
+- 可观测：OpenTelemetry + Prometheus + Grafana（按阶段引入）
 
-### 4. 内容营销系统
-- 一键生成小红书爽文
-- 图文素材管理
-- 发布计划管理
+### 0.3 数据传输稳定性与效率（必须落地）
 
-### 5. 小红书运营管理
-- 账户数据监控
-- 评论管理和回复
-- 私信管理
-- 公域转私域追踪
+- 所有写 API：支持幂等键 + 请求签名校验。
+- 批量任务：分批（默认 100）+ 指数退避重试。
+- 可靠消息：Outbox 表 + job worker 双通道保障。
+- 限流削峰：网关限流 + 队列缓冲 + 延迟任务。
 
-### 6. AI 智能对话
-- DeepSeek 驱动的客户端 AI 客服
-- Qwen 驱动的后台数据分析
-- 对话历史管理
-- 自动提取客户信息
+### 0.4 异步架构与开源工具（GitHub 生态优先）
 
-### 7. Airtable 双向集成
-- 线索自动同步
-- 客户信息读取
-- 跟进记录管理
+- 任务队列：BullMQ
+- 调度：node-cron（短期），后续可迁 Temporal（中长期）
+- API 文档：OpenAPI + Swagger UI
+- 配置管理：环境变量 + DB 配置表 + feature flag
 
 ---
 
-## 实施计划（按优先级）
+## 1. PostgreSQL + pgvector 数据库迁移方案
 
-### 第一阶段：核心管理后台 ⭐⭐⭐⭐⭐（最高优先级）
-**目标**：建立统一的管理入口，整合现有功能
+### 1.1 迁移目标
 
-**任务清单**：
-1. 创建 DashboardLayout 组件（侧边栏 + 内容区）
-2. 设计侧边栏导航结构
-3. 重构 Admin 页面为 Dashboard 子页面
-4. 重构 Analytics 页面为 Dashboard 子页面
-5. 创建对话管理页面（Conversations）
-6. 实现对话列表和详情查看
-7. 实现 AI 对话自动写入 Airtable
-8. 实现从 Airtable 读取客户信息增强 AI 回复
+- 将当前数据库从 MySQL/TiDB 路径迁移为 PostgreSQL。
+- 为知识库与对话语义检索接入 pgvector。
+- 保持现有业务接口尽量无感迁移（Repository 层隔离 SQL 方言差异）。
 
-**数据库表**：
-- 无需新增，使用现有表
+### 1.2 分阶段迁移
 
-**预计时间**：2-3 小时
+1. **准备期**：
+   - 新建 PostgreSQL 实例，启用 `pgvector` 扩展。
+   - 在 Drizzle schema 中补齐 PostgreSQL 类型映射（jsonb、timestamptz、vector）。
+2. **双写期**：
+   - 核心写链路（leads/messages/conversations）双写 MySQL + PostgreSQL。
+   - 增加数据对账任务（行数、校验和、抽样字段比对）。
+3. **切读期**：
+   - 灰度切换读请求到 PostgreSQL（按租户/门店）。
+4. **收口期**：
+   - 下线 MySQL 写路径，保留只读回滚窗口 1~2 周。
 
----
+### 1.3 关键表改造建议
 
-### 第二阶段：内容营销系统 ⭐⭐⭐⭐（高优先级）
-**目标**：实现一键生成小红书爽文，提升内容生产效率
+- `knowledge_base` 增加：
+  - `embedding vector(1536)`
+  - `embedding_model varchar(64)`
+  - `embedding_updated_at timestamptz`
+- 新建索引：
+  - `CREATE INDEX idx_kb_embedding_ivfflat ON knowledge_base USING ivfflat (embedding vector_cosine_ops);`
+  - 业务常用联合索引（如 `(lead_id, created_at DESC)`）
 
-**任务清单**：
-1. 创建内容管理页面（Content）
-2. 实现一键生成爽文功能（标题 + 正文 + 话题标签）
-3. 实现图文素材管理（上传、编辑、删除）
-4. 实现内容模板管理（不同项目的文案模板）
-5. 集成图片生成功能（复用之前的小红书图文生成）
-6. 实现内容预览和导出
+### 1.4 回滚策略
 
-**数据库表**：
-```sql
-CREATE TABLE content_posts (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  title VARCHAR(200) NOT NULL,
-  content TEXT NOT NULL,
-  tags VARCHAR(500),
-  project_type VARCHAR(100),
-  images JSON,
-  status ENUM('draft', 'published') DEFAULT 'draft',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+- 迁移全程保留 binlog/CDC 或应用层审计日志。
+- 切读后保留回滚开关，支持一分钟内切回旧库。
 
-**预计时间**：2-3 小时
+### 1.5 Airtable（试用）退场与替代策略
 
----
-
-### 第三阶段：客户画像增强 ⭐⭐⭐⭐（高优先级）
-**目标**：建立完整的客户心理画像和分层体系
-
-**任务清单**：
-1. 扩展客户表，添加心理标签字段
-2. 创建客户管理页面（Customers）
-3. 实现客户列表、筛选、搜索
-4. 实现客户详情页（画像 + 消费记录 + 对话历史）
-5. 实现心理标签自动识别（LLM 分析对话）
-6. 实现客户分层分级逻辑
-7. 实现重要事件标记和提醒
-
-**数据库表**：
-```sql
-CREATE TABLE customer_tags (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  lead_id INT NOT NULL,
-  tag_type ENUM('psychology', 'behavior', 'lifecycle', 'event') NOT NULL,
-  tag_name VARCHAR(100) NOT NULL,
-  tag_value VARCHAR(200),
-  confidence FLOAT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (lead_id) REFERENCES leads(id)
-);
-
-CREATE TABLE customer_events (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  lead_id INT NOT NULL,
-  event_type VARCHAR(100) NOT NULL,
-  event_date DATE NOT NULL,
-  description TEXT,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (lead_id) REFERENCES leads(id)
-);
-```
-
-**预计时间**：3-4 小时
+- Airtable 定位调整：
+  - 从“主业务库”降级为“临时导入/运营协作工具”。
+  - 生产链路禁止依赖 Airtable 可用性。
+- 数据主权策略：
+  - 线索、会话、预约、复盘、触发日志全部以 PostgreSQL 为唯一事实来源（SoT）。
+  - Airtable 数据通过定时任务或手动任务导入，写入内部标准表后再参与业务流程。
+- 接口兼容策略：
+  - 保留 `airtable-*` 路由但改为适配层，失败不阻塞主流程。
+  - 新增 `source_type` 字段（`native|airtable_import`）用于审计来源。
+- 下线建议：
+  - 连续 2~4 周无关键依赖后，逐步关闭 Airtable 写入与 webhook 回调。
 
 ---
 
-### 第四阶段：自动化触发系统 ⭐⭐⭐（中优先级）
-**目标**：实现基于时间、行为、天气的自动化营销触发
+## 2. 企业微信真实接入实施方案（本轮暂缓）
 
-**任务清单**：
-1. 创建触发规则管理页面
-2. 实现时间触发规则配置（生日、节假日、回访、复购）
-3. 实现行为触发规则配置（流失预警、高价值识别）
-4. 集成天气 API（和风天气/高德天气）
-5. 实现天气触发规则配置（降温、台风、高温、空气质量）
-6. 创建定时任务系统（Node.js cron）
-7. 实现触发动作执行（企业微信推送、AI 主动对话、分配顾问）
-8. 实现触发历史记录和效果追踪
-
-**数据库表**：
-```sql
-CREATE TABLE trigger_rules (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  rule_name VARCHAR(200) NOT NULL,
-  trigger_type ENUM('time', 'behavior', 'weather') NOT NULL,
-  trigger_condition JSON NOT NULL,
-  action_type ENUM('wechat_push', 'ai_chat', 'assign_consultant', 'sms') NOT NULL,
-  action_config JSON,
-  is_active BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE trigger_logs (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  rule_id INT NOT NULL,
-  lead_id INT,
-  trigger_time TIMESTAMP NOT NULL,
-  action_result JSON,
-  status ENUM('success', 'failed') NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (rule_id) REFERENCES trigger_rules(id)
-);
-```
-
-**预计时间**：4-5 小时
+- 本轮不接入企业微信真实 API。
+- 保留 `notification_provider` 抽象层与 webhook 配置表结构。
+- 所有触发规则中的企业微信动作统一 fallback 为“站内消息 + 操作日志”。
 
 ---
 
-### 第五阶段：小红书运营管理 ⭐⭐（中低优先级）
-**目标**：实现小红书数据监控和评论管理
+## 3. 预约排期系统实施方案
 
-**任务清单**：
-1. 创建小红书运营页面（Xiaohongshu）
-2. 调研小红书 API 或第三方工具（如蝉妈妈、新红）
-3. 实现账户数据监控（浏览、点赞、评论、收藏）
-4. 实现评论列表和回复功能
-5. 实现私信管理（如果 API 支持）
-6. 实现公域转私域追踪（评论/私信 → 线索）
-7. 实现数据报表和趋势分析
+### 3.1 目标
 
-**数据库表**：
-```sql
-CREATE TABLE xiaohongshu_posts (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  post_id VARCHAR(100) UNIQUE NOT NULL,
-  title VARCHAR(200),
-  content TEXT,
-  images JSON,
-  views INT DEFAULT 0,
-  likes INT DEFAULT 0,
-  comments INT DEFAULT 0,
-  collects INT DEFAULT 0,
-  published_at TIMESTAMP,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+实现咨询师/医生排班、客户预约、冲突检测、提醒通知、改约/取消闭环。
 
-CREATE TABLE xiaohongshu_comments (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  post_id VARCHAR(100) NOT NULL,
-  comment_id VARCHAR(100) UNIQUE NOT NULL,
-  user_name VARCHAR(100),
-  content TEXT,
-  replied BOOLEAN DEFAULT FALSE,
-  is_potential_lead BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
+### 3.2 数据模型
 
-**预计时间**：3-4 小时
+- `staff_schedules`：排班模板
+- `appointment_slots`：可预约时隙
+- `appointments`：预约单（状态：pending/confirmed/completed/cancelled/no_show）
+- `appointment_events`：状态流转审计
+
+### 3.3 核心规则
+
+- 同一咨询师同一时段不可重复预约（唯一索引控制）。
+- 预约确认后写入 outbox 事件触发提醒任务。
+- 改约必须保留原预约历史（不可硬覆盖）。
+
+### 3.4 接口清单
+
+- `POST /api/appointments`
+- `POST /api/appointments/:id/confirm`
+- `POST /api/appointments/:id/reschedule`
+- `POST /api/appointments/:id/cancel`
+- `GET /api/appointments/calendar?start=...&end=...`
 
 ---
 
-### 第六阶段：系统集成测试 ⭐⭐⭐⭐（高优先级）
-**目标**：确保所有模块正常运行，编写完整文档
+## 4. AI 服务复盘系统实施方案
 
-**任务清单**：
-1. 端到端测试（引流 → 对话 → 留资 → Airtable → 触发 → 跟进）
-2. 性能优化（数据库索引、查询优化）
-3. 编写用户使用手册
-4. 编写系统管理员手册
-5. 编写 API 文档
-6. 录制功能演示视频
+### 4.1 目标
 
-**预计时间**：2-3 小时
+将对话、线索跟进、预约结果聚合成可追踪的“服务复盘记录”，用于培训与流程优化。
 
----
+### 4.2 复盘流程
 
-## 技术架构
+1. 每日定时任务抓取前一日会话与结果数据。
+2. LLM 生成：问题摘要、风险点、建议动作、标准话术偏差。
+3. 写入 `service_reviews` 与 `service_review_items`。
+4. 管理后台支持人工修订与“已采纳/已忽略”标记。
 
-### 前端
-- React 19 + TypeScript
-- Tailwind CSS 4
-- tRPC（类型安全的 API 调用）
-- Wouter（路由）
-- shadcn/ui（UI 组件）
+### 4.3 质量与安全
 
-### 后端
-- Node.js + Express
-- tRPC Server
-- MySQL/TiDB（数据库）
-- Node-cron（定时任务）
-
-### AI 集成
-- DeepSeek API（客户端 AI 客服）
-- Qwen API（后台数据分析）
-
-### 第三方集成
-- Airtable API（CRM 数据同步）
-- 和风天气 API（天气触发）
-- 企业微信 Webhook（消息推送）
-- 小红书 API（待调研）
+- 引入“提示词模板版本号”用于可追溯。
+- 对敏感信息脱敏后再进入模型。
+- 失败任务进入死信队列，支持重放。
 
 ---
 
-## 数据库完整设计
+## 5. 注册登录策略实施方案
 
-### 现有表
-1. `users` - 用户表
-2. `knowledge_base` - 知识库表
-3. `conversations` - 对话表
-4. `messages` - 消息表
-5. `leads` - 线索表
-6. `system_config` - 系统配置表
+### 5.1 目标
 
-### 新增表（按阶段）
-**第二阶段**：
-- `content_posts` - 内容发布表
+从“基础登录”升级为“可扩展认证体系”，支持账号密码 + 手机验证码登录，并满足后台安全要求。
 
-**第三阶段**：
-- `customer_tags` - 客户标签表
-- `customer_events` - 客户事件表
+### 5.2 方案要点
 
-**第四阶段**：
-- `trigger_rules` - 触发规则表
-- `trigger_logs` - 触发日志表
+- 用户表新增：`password_hash`, `password_algo`, `last_login_at`, `login_fail_count`, `locked_until`。
+- Session/JWT 双模式：
+  - 后台管理端优先 HttpOnly Cookie Session。
+  - 对外 API 可选 JWT（短期）+ refresh token（长期）。
+- 安全策略：
+  - 密码强度校验；
+  - 连续失败锁定；
+  - 异地登录提醒（后续）。
 
-**第五阶段**：
-- `xiaohongshu_posts` - 小红书发布表
-- `xiaohongshu_comments` - 小红书评论表
+### 5.3 接口
 
----
-
-## 总预计时间
-
-- 第一阶段：2-3 小时
-- 第二阶段：2-3 小时
-- 第三阶段：3-4 小时
-- 第四阶段：4-5 小时
-- 第五阶段：3-4 小时
-- 第六阶段：2-3 小时
-
-**总计：16-22 小时**
+- `POST /api/auth/register`
+- `POST /api/auth/login/password`
+- `POST /api/auth/login/sms`
+- `POST /api/auth/logout`
+- `POST /api/auth/refresh`
 
 ---
 
-## 立即开始
+## 6. 短信通知系统实施方案
 
-**当前优先级：第一阶段 - 核心管理后台**
+### 6.1 目标
 
-我现在开始实施第一阶段，创建统一的 Dashboard 系统。完成后会立即交付给您测试，然后继续下一阶段。
+支撑注册登录验证码、预约提醒、营销触达三类短信能力。
+
+### 6.2 架构
+
+- `sms_providers`：供应商配置（阿里云/腾讯云）
+- `sms_templates`：模板管理（变量、签名、审核状态）
+- `sms_messages`：发送记录（状态机）
+- 发送链路：API -> Outbox -> BullMQ Worker -> Provider -> 回执更新
+
+### 6.3 风控与稳定性
+
+- 单用户/单 IP/单设备限频。
+- 验证码短期有效（默认 5 分钟）。
+- 供应商失败自动切换（主备路由）。
 
 ---
 
-*文档作者：Manus AI*  
-*最后更新：2026-02-03*
+## 7. 系统集成测试方案
+
+### 7.1 测试分层
+
+- **单元测试**：规则引擎、预约冲突检测、认证策略。
+- **集成测试**：数据库读写、事务 outbox、短信 worker。
+- **E2E 测试**：线索创建 -> 对话 -> 预约 -> 提醒 -> 复盘闭环。
+
+### 7.2 验收场景（最小闭环）
+
+1. 新用户注册并登录成功。
+2. 创建预约并触发提醒任务。
+3. 对话结束后自动进入次日复盘。
+4. 后台可查看复盘建议并标记处理状态。
+
+### 7.3 非功能指标
+
+- 核心 API P95 < 300ms（不含 AI 推理）
+- 预约写入成功率 >= 99.9%
+- 短信到达成功率（供应商回执）>= 98%
+
+---
+
+## 8. 建议实施排期（不含企业微信）
+
+### Sprint 1（1 周）
+- PostgreSQL 基础迁移 + 双写框架
+- 认证体系改造（密码登录）
+
+### Sprint 2（1 周）
+- 预约排期主链路 + 日历视图
+- 短信验证码与预约提醒
+
+### Sprint 3（1 周）
+- AI 复盘系统 + 管理后台复盘页
+- 集成测试与灰度发布
+
+---
+
+## 9. 与现有仓库的衔接说明
+
+- 保持现有 `server/routers` 风格，新增 `appointments/auth/sms/review` 路由模块。
+- 保持现有前端管理后台结构，新增“预约排期”“复盘中心”“认证安全”菜单。
+- 复用现有 AI 与知识库能力，优先补齐向量化与离线任务，不影响线上对话主链路。
+
+---
+
+*最后更新：2026-02-05*

@@ -33,6 +33,11 @@ async function getAirtableConfig(): Promise<{ token: string; baseId: string } | 
   }
 }
 
+
+export async function isAirtableEnabled(): Promise<boolean> {
+  const config = await getAirtableConfig();
+  return !!config;
+}
 interface AirtableRecord {
   id?: string;
   fields: Record<string, unknown>;
@@ -159,7 +164,7 @@ export async function createLeadInAirtable(leadData: {
   message?: string;
   source: string;
   sourceContent?: string;
-}): Promise<string> {
+}): Promise<string | null> {
   const fields: Record<string, unknown> = {
     "姓名": leadData.name,
     "手机号": leadData.phone,
@@ -175,8 +180,13 @@ export async function createLeadInAirtable(leadData: {
   if (leadData.message) fields["留言内容"] = leadData.message;
   if (leadData.sourceContent) fields["来源内容"] = leadData.sourceContent;
 
-  const record = await createAirtableRecord("线索池", fields);
-  return record.id!;
+  try {
+    const record = await createAirtableRecord("线索池", fields);
+    return record.id!;
+  } catch (error) {
+    console.warn("[Airtable] lead sync skipped:", error instanceof Error ? error.message : error);
+    return null;
+  }
 }
 
 /**
