@@ -112,4 +112,31 @@ describe("appointments router", () => {
     expect(list).toHaveLength(1);
   });
 
+
+  it("rejects create when idempotencyKey is reused with different payload", async () => {
+    const caller = appRouter.createCaller(createProtectedContext());
+
+    await caller.appointments.create({
+      customerName: "客户C",
+      customerPhone: "13900000009",
+      staffId: "doctor-1",
+      staffName: "Doctor",
+      startAt: new Date("2026-02-08T14:00:00.000Z"),
+      endAt: new Date("2026-02-08T15:00:00.000Z"),
+      idempotencyKey: "router-create-2",
+    });
+
+    await expect(
+      caller.appointments.create({
+        customerName: "客户C-变更",
+        customerPhone: "13900000009",
+        staffId: "doctor-1",
+        staffName: "Doctor",
+        startAt: new Date("2026-02-08T14:00:00.000Z"),
+        endAt: new Date("2026-02-08T15:00:00.000Z"),
+        idempotencyKey: "router-create-2",
+      })
+    ).rejects.toThrow("幂等键冲突");
+  });
+
 });

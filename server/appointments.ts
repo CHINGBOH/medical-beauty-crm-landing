@@ -50,6 +50,19 @@ function canRescheduleStatus(status: AppointmentStatus): boolean {
   return status === "pending" || status === "confirmed";
 }
 
+function buildCreateSignature(input: CreateAppointmentInput): string {
+  return JSON.stringify({
+    customerId: input.customerId ?? null,
+    customerName: input.customerName,
+    customerPhone: input.customerPhone,
+    staffId: input.staffId,
+    staffName: input.staffName,
+    startAt: input.startAt.toISOString(),
+    endAt: input.endAt.toISOString(),
+    notes: input.notes ?? null,
+  });
+}
+
 export function hasTimeConflict(
   appointments: AppointmentRecord[],
   staffId: string,
@@ -71,7 +84,7 @@ export function hasTimeConflict(
 export class InMemoryAppointmentStore {
   private appointments: AppointmentRecord[] = [];
   private nextId = 1;
-  private idempotentCreateIndex = new Map<string, number>();
+  private idempotentCreateIndex = new Map<string, { appointmentId: number; signature: string }>();
 
   list(): AppointmentRecord[] {
     return [...this.appointments].sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
@@ -89,10 +102,14 @@ export class InMemoryAppointmentStore {
 
   create(input: CreateAppointmentInput): AppointmentRecord {
     if (input.idempotencyKey) {
-      const existedId = this.idempotentCreateIndex.get(input.idempotencyKey);
-      if (existedId) {
-        const existed = this.getById(existedId);
-        if (existed) return existed;
+      const signature = buildCreateSignature(input);
+      const existed = this.idempotentCreateIndex.get(input.idempotencyKey);
+      if (existed) {
+        if (existed.signature !== signature) {
+          throw new Error("幂等键冲突：相同 idempotencyKey 不允许对应不同预约参数");
+        }
+        const appointment = this.getById(existed.appointmentId);
+        if (appointment) return appointment;
       }
     }
 
@@ -122,7 +139,10 @@ export class InMemoryAppointmentStore {
 
     this.appointments.push(record);
     if (input.idempotencyKey) {
-      this.idempotentCreateIndex.set(input.idempotencyKey, record.id);
+      this.idempotentCreateIndex.set(input.idempotencyKey, {
+        appointmentId: record.id,
+        signature: buildCreateSignature(input),
+      });
     }
     return record;
   }

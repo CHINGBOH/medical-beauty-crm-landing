@@ -175,4 +175,30 @@ describe("appointments time rules", () => {
     expect(store.list()).toHaveLength(1);
   });
 
+
+  it("rejects different payload with the same idempotencyKey", () => {
+    const store = new InMemoryAppointmentStore();
+    store.create({
+      customerName: "Customer H",
+      customerPhone: "13900000008",
+      staffId: "doctor-4",
+      staffName: "Doctor 4",
+      startAt: new Date("2026-02-08T14:00:00.000Z"),
+      endAt: new Date("2026-02-08T15:00:00.000Z"),
+      idempotencyKey: "apt-create-h-1",
+    });
+
+    expect(() =>
+      store.create({
+        customerName: "Customer H-Changed",
+        customerPhone: "13900000008",
+        staffId: "doctor-4",
+        staffName: "Doctor 4",
+        startAt: new Date("2026-02-08T14:00:00.000Z"),
+        endAt: new Date("2026-02-08T15:00:00.000Z"),
+        idempotencyKey: "apt-create-h-1",
+      })
+    ).toThrow("幂等键冲突");
+  });
+
 });
