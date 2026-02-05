@@ -71,6 +71,19 @@ export default function DashboardTriggers() {
     }
   };
 
+
+  const getTriggerCondition = (trigger: {
+    type: string;
+    timeConfig: string | null;
+    behaviorConfig: string | null;
+    weatherConfig: string | null;
+  }) => {
+    if (trigger.type === "time") return trigger.timeConfig ?? "未配置";
+    if (trigger.type === "behavior") return trigger.behaviorConfig ?? "未配置";
+    if (trigger.type === "weather") return trigger.weatherConfig ?? "未配置";
+    return "未配置";
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -198,8 +211,8 @@ export default function DashboardTriggers() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={trigger.enabled ? "default" : "secondary"}>
-                      {trigger.enabled ? "已启用" : "已禁用"}
+                    <Badge variant={trigger.isActive ? "default" : "secondary"}>
+                      {trigger.isActive ? "已启用" : "已禁用"}
                     </Badge>
                     <Button
                       variant="outline"
@@ -226,7 +239,7 @@ export default function DashboardTriggers() {
                   <div>
                     <span className="text-sm font-medium">触发条件：</span>
                     <pre className="mt-1 p-2 bg-muted rounded text-xs overflow-x-auto">
-                      {trigger.condition}
+                      {getTriggerCondition(trigger)}
                     </pre>
                   </div>
                   <div>

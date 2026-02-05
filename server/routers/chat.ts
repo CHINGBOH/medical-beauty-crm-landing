@@ -10,7 +10,8 @@ import {
   getMessagesByConversationId,
   getActiveKnowledge,
   incrementKnowledgeUsage,
-  createLead
+  createLead,
+  updateLeadAirtableId
 } from "../db";
 import { createLeadInAirtable, syncConversationToAirtable, getCustomerHistoryFromAirtable } from "../airtable";
 import { analyzePsychology, shouldAnalyzePsychology } from "../psychology-analyzer";
@@ -261,7 +262,7 @@ export const chatRouter = router({
       }
       
       // 创建本地线索记录
-      await createLead({
+      const localLeadInsertResult = await createLead({
         name: input.name,
         phone: input.phone,
         wechat: input.wechat,
@@ -273,34 +274,37 @@ export const chatRouter = router({
         status: "新线索",
         conversationId: conversation.id,
       });
+
+      const localLeadId = Number((localLeadInsertResult as { insertId?: number } | undefined)?.insertId ?? 0);
       
-      // 同步到 Airtable
-      try {
-        const airtableId = await createLeadInAirtable({
-          name: input.name,
-          phone: input.phone,
-          wechat: input.wechat,
-          interestedServices: input.interestedServices,
-          budget: input.budget,
-          message: input.message,
-          source: "AI客服对话",
-          sourceContent: `会话ID: ${input.sessionId}`,
-        });
-        await updateConversation(input.sessionId, {
-          status: "converted",
-          leadId: airtableId,
-        });
-        
-        return {
-          success: true,
-          leadId: airtableId,
-        };
-      } catch (error) {
-        console.error("Failed to sync to Airtable:", error);
-        return {
-          success: false,
-          error: "同步到 Airtable 失败，但本地记录已保存",
-        };
+      // 同步到 Airtable（试用能力，失败不阻塞主流程）
+      const airtableId = await createLeadInAirtable({
+        name: input.name,
+        phone: input.phone,
+        wechat: input.wechat,
+        interestedServices: input.interestedServices,
+        budget: input.budget,
+        message: input.message,
+        source: "AI客服对话",
+        sourceContent: `会话ID: ${input.sessionId}`,
+      });
+
+      if (airtableId && localLeadId > 0) {
+        await updateLeadAirtableId(localLeadId, airtableId);
       }
+
+      await updateConversation(input.sessionId, {
+        status: "converted",
+        leadId: airtableId ?? null,
+      });
+
+      return {
+        success: true,
+        leadId: airtableId,
+        localLeadId,
+        sourceType: airtableId ? "airtable_import" : "native",
+        warning: airtableId ? undefined : "Airtable 未配置或同步失败，已仅保存本地数据",
+        error: undefined,
+      };
     }),
 });
