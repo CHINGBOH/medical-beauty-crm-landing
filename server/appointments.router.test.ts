@@ -136,7 +136,19 @@ describe("appointments router", () => {
         endAt: new Date("2026-02-08T15:00:00.000Z"),
         idempotencyKey: "router-create-2",
       })
-    ).rejects.toThrow("幂等键冲突");
+    ).rejects.toMatchObject<Partial<TRPCError>>({
+      code: "CONFLICT",
+      message: "幂等键冲突：相同 idempotencyKey 不允许对应不同预约参数",
+    });
+  });
+
+
+  it("maps missing appointment to NOT_FOUND", async () => {
+    const caller = appRouter.createCaller(createProtectedContext());
+
+    await expect(caller.appointments.confirm({ id: 99999 })).rejects.toMatchObject<Partial<TRPCError>>({
+      code: "NOT_FOUND",
+    });
   });
 
 });

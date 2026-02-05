@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { protectedProcedure, router } from "../_core/trpc";
 import { appointmentStore } from "../appointments";
@@ -19,30 +20,78 @@ const createInput = z
     path: ["endAt"],
   });
 
+function mapAppointmentError(error: unknown): never {
+  if (!(error instanceof Error)) {
+    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "预约服务异常" });
+  }
+
+  if (error.message.includes("幂等键冲突") || error.message.includes("已有预约")) {
+    throw new TRPCError({ code: "CONFLICT", message: error.message });
+  }
+
+  if (error.message.includes("不允许改约") || error.message.includes("状态流转不合法")) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+  }
+
+  if (error.message.includes("预约不存在")) {
+    throw new TRPCError({ code: "NOT_FOUND", message: error.message });
+  }
+
+  throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: error.message });
+}
+
 export const appointmentsRouter = router({
   list: protectedProcedure.query(() => {
     return appointmentStore.list();
   }),
 
   create: protectedProcedure.input(createInput).mutation(({ input }) => {
-    return appointmentStore.create(input);
+    try {
+      return appointmentStore.create(input);
+    } catch (error) {
+      mapAppointmentError(error);
+    }
   }),
 
   confirm: protectedProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(({ input }) => appointmentStore.updateStatus(input.id, "confirmed")),
+    .mutation(({ input }) => {
+      try {
+        return appointmentStore.updateStatus(input.id, "confirmed");
+      } catch (error) {
+        mapAppointmentError(error);
+      }
+    }),
 
   complete: protectedProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(({ input }) => appointmentStore.updateStatus(input.id, "completed")),
+    .mutation(({ input }) => {
+      try {
+        return appointmentStore.updateStatus(input.id, "completed");
+      } catch (error) {
+        mapAppointmentError(error);
+      }
+    }),
 
   cancel: protectedProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(({ input }) => appointmentStore.updateStatus(input.id, "cancelled")),
+    .mutation(({ input }) => {
+      try {
+        return appointmentStore.updateStatus(input.id, "cancelled");
+      } catch (error) {
+        mapAppointmentError(error);
+      }
+    }),
 
   noShow: protectedProcedure
     .input(z.object({ id: z.number() }))
-    .mutation(({ input }) => appointmentStore.updateStatus(input.id, "no_show")),
+    .mutation(({ input }) => {
+      try {
+        return appointmentStore.updateStatus(input.id, "no_show");
+      } catch (error) {
+        mapAppointmentError(error);
+      }
+    }),
 
   reschedule: protectedProcedure
     .input(
@@ -57,7 +106,13 @@ export const appointmentsRouter = router({
           path: ["endAt"],
         })
     )
-    .mutation(({ input }) => appointmentStore.reschedule(input.id, input.startAt, input.endAt)),
+    .mutation(({ input }) => {
+      try {
+        return appointmentStore.reschedule(input.id, input.startAt, input.endAt);
+      } catch (error) {
+        mapAppointmentError(error);
+      }
+    }),
 
   calendar: protectedProcedure
     .input(
