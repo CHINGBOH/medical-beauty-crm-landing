@@ -187,7 +187,7 @@ function DashboardLayoutContent({
                     onClick={() => setLocation("/")}
                     className="font-semibold tracking-tight truncate hover:underline"
                   >
-                    妍美医美 CRM
+                    焱磊医美 CRM
                   </button>
                   <button
                     type="button"

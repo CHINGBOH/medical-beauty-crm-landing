@@ -24,7 +24,7 @@ export default function Home() {
   // SEO 优化
   useEffect(() => {
     // 设置页面标题（30-60字符）
-    document.title = "深圳妍美医美门诊部-超皮秒祛斑|水光针|热玛吉|专业医美机构";
+    document.title = "焱磊医美 Liora Yan - Ignite Your Glow | 高端医美定制";
     
     // 设置描述信息（50-160字符）
     let metaDescription = document.querySelector('meta[name="description"]');
@@ -33,7 +33,7 @@ export default function Home() {
       metaDescription.setAttribute('name', 'description');
       document.head.appendChild(metaDescription);
     }
-    metaDescription.setAttribute('content', '深圳妍美医疗美容门诊部提供专业的超皮秒祛斑、水光针、热玛吉等医美项目。采用先进技术，专业医生团队，为您打造完美肌肤。免费预约咨询，在线 AI 客服 24 小时服务。');
+    metaDescription.setAttribute('content', 'Liora Yan 焱磊医美 (Ignite Your Glow) 提供高端定制医美服务。超皮秒、热玛吉、水光针等项目，唤醒您的肌肤光彩。');
     
     // 设置关键词
     let metaKeywords = document.querySelector('meta[name="keywords"]');
@@ -42,7 +42,7 @@ export default function Home() {
       metaKeywords.setAttribute('name', 'keywords');
       document.head.appendChild(metaKeywords);
     }
-    metaKeywords.setAttribute('content', '深圳医美,妍美医美,超皮秒祛斑,水光针,热玛吉,医美整形,皮肤美容,抽脂塑形,医美门诊部,深圳美容院');
+    metaKeywords.setAttribute('content', '焱磊医美,Liora Yan,Ignite Your Glow,深圳医美,超皮秒,热玛吉,抗衰老,皮肤管理');
   }, []);
 
   const [, setLocation] = useLocation();
@@ -105,9 +105,9 @@ export default function Home() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src="/yanmei-logo.jpg" alt="深圳妍美" className="h-10 w-10 object-contain" />
-              <span className="text-xl font-bold text-amber-800">
-                深圳妍美医疗美容门诊部
+              <img src="/logo.png" alt="Liora Yan" className="h-10 w-10 object-contain" />
+              <span className="text-xl font-bold text-amber-800 font-serif">
+                焱磊医美 Liora Yan
               </span>
             </div>
             <div className="flex gap-4">
@@ -156,11 +156,11 @@ export default function Home() {
             <Badge className="mb-4 bg-amber-100 text-amber-700 hover:bg-amber-200">
               ⭐ 2024 年度推荐项目
             </Badge>
-            <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              超皮秒祛斑
+            <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight font-serif">
+              Ignite Your Glow
               <br />
               <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                让肌肤重焕光彩
+                点燃你的光芒
               </span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 leading-relaxed">
@@ -448,11 +448,11 @@ export default function Home() {
           <div className="grid md:grid-cols-3 gap-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <img src="/yanmei-logo.jpg" alt="深圳妍美" className="h-8 w-8 object-contain" />
-                <span className="text-xl font-bold">深圳妍美</span>
+                <img src="/logo.png" alt="Liora Yan" className="h-8 w-8 object-contain" />
+                <span className="text-xl font-bold font-serif">焱磊医美</span>
               </div>
               <p className="text-gray-400">
-                深圳妍美医疗美容门诊部，专注医美领域，为每一位客户提供安全、专业、个性化的美丽解决方案。
+                Liora Yan 焱磊医美，专注高端定制医疗美容，Ignite Your Glow，为您点燃肌肤光彩。
               </p>
             </div>
             <div>
@@ -478,7 +478,7 @@ export default function Home() {
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400 text-sm">
-            <p>© 2024 深圳妍美医疗美容门诊部. All rights reserved.</p>
+            <p>© 2026 Liora Yan 焱磊医美. All rights reserved.</p>
           </div>
         </div>
       </footer>
