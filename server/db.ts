@@ -1,5 +1,6 @@
 import { eq, desc, and } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { 
   InsertUser, 
   users, 
@@ -20,7 +21,8 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      const client = postgres(process.env.DATABASE_URL);
+      _db = drizzle(client);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -79,7 +81,9 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.lastSignedIn = new Date();
     }
 
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
+    // PostgreSQL使用ON CONFLICT替代onDuplicateKeyUpdate
+    await db.insert(users).values(values).onConflictDoUpdate({
+      target: users.openId,
       set: updateSet,
     });
   } catch (error) {
@@ -312,10 +316,9 @@ export async function createXiaohongshuPost(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const { xiaohongshuPosts } = await import("../drizzle/schema");
-  
-  const result = await db.insert(xiaohongshuPosts).values(data);
-  return { id: Number((result as any).insertId) };
+  const { xiaohongshuPosts: xiaohongshuPostsTable } = await import("../drizzle/schema");
+  const result = await db.insert(xiaohongshuPostsTable).values(data).returning({ id: xiaohongshuPostsTable.id });
+  return { id: result[0]?.id || 0 };
 }
 
 export async function updateXiaohongshuPost(id: number, data: any) {
@@ -389,19 +392,17 @@ export async function createTrigger(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const { triggers } = await import("../drizzle/schema");
-  
-  const result = await db.insert(triggers).values(data);
-  return { id: Number((result as any).insertId) };
+  const { triggers: triggersTable } = await import("../drizzle/schema");
+  const result = await db.insert(triggersTable).values(data).returning({ id: triggersTable.id });
+  return { id: result[0]?.id || 0 };
 }
 
 export async function updateTrigger(id: number, data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const { triggers } = await import("../drizzle/schema");
-  
-  await db.update(triggers).set(data).where(eq(triggers.id, id));
+  const { triggers: triggersTable } = await import("../drizzle/schema");
+  await db.update(triggersTable).set(data).where(eq(triggersTable.id, id));
   return { success: true };
 }
 
@@ -409,9 +410,8 @@ export async function deleteTrigger(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const { triggers } = await import("../drizzle/schema");
-  
-  await db.delete(triggers).where(eq(triggers.id, id));
+  const { triggers: triggersTable } = await import("../drizzle/schema");
+  await db.delete(triggersTable).where(eq(triggersTable.id, id));
   return { success: true };
 }
 
@@ -419,11 +419,10 @@ export async function getTriggerExecutions(triggerId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const { triggerExecutions } = await import("../drizzle/schema");
-  
-  const result = await db.select().from(triggerExecutions)
-    .where(eq(triggerExecutions.triggerId, triggerId))
-    .orderBy(desc(triggerExecutions.executedAt))
+  const { triggerExecutions: triggerExecutionsTable } = await import("../drizzle/schema");
+  const result = await db.select().from(triggerExecutionsTable)
+    .where(eq(triggerExecutionsTable.triggerId, triggerId))
+    .orderBy(desc(triggerExecutionsTable.executedAt))
     .limit(50);
   return result;
 }
@@ -432,8 +431,7 @@ export async function createTriggerExecution(data: any) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  const { triggerExecutions } = await import("../drizzle/schema");
-  
-  const result = await db.insert(triggerExecutions).values(data);
-  return { id: Number((result as any).insertId) };
+  const { triggerExecutions: triggerExecutionsTable } = await import("../drizzle/schema");
+  const result = await db.insert(triggerExecutionsTable).values(data).returning({ id: triggerExecutionsTable.id });
+  return { id: result[0]?.id || 0 };
 }

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useLocation } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,7 @@ type ChatMessage = {
 };
 
 export default function Chat() {
+  const [, setLocation] = useLocation();
   const [sessionId, setSessionId] = useState<string>("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -126,6 +128,26 @@ export default function Chat() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50">
+      <nav className="bg-white/80 backdrop-blur-sm border-b border-amber-100 sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-lg font-semibold text-amber-800">在线咨询</span>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="ghost" size="sm" onClick={() => setLocation("/")}>
+                返回前台
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setLocation("/dashboard/admin")}>
+                后台管理
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setLocation("/dashboard/ai")}>
+                数据助手
+              </Button>
+            </div>
+          </div>
+        </div>
+      </nav>
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           {/* 头部 */}

@@ -211,7 +211,9 @@ const normalizeToolChoice = (
 
 const resolveApiUrl = () =>
   ENV.forgeApiUrl && ENV.forgeApiUrl.trim().length > 0
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
+    ? ENV.forgeApiUrl.includes('/chat/completions')
+      ? ENV.forgeApiUrl // 已包含完整路径，直接使用
+      : `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions` // 需要拼接
     : "https://forge.manus.im/v1/chat/completions";
 
 const assertApiKey = () => {
@@ -280,7 +282,9 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   } = params;
 
   const payload: Record<string, unknown> = {
-    model: "gemini-2.5-flash",
+    model: ENV.forgeApiUrl?.includes('dashscope.aliyuncs.com') 
+      ? "qwen-plus"  // Qwen API
+      : "gemini-2.5-flash",  // 默认 Gemini
     messages: messages.map(normalizeMessage),
   };
 

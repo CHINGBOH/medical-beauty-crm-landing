@@ -3,7 +3,7 @@ import { protectedProcedure, router } from "../_core/trpc";
 import { invokeLLM } from "../_core/llm";
 import { getDb } from "../db";
 import { leads, conversations, messages, knowledgeBase } from "../../drizzle/schema";
-import { eq, and, gte, lte, like, sql, desc } from "drizzle-orm";
+import { eq, and, gte, lte, like, sql, desc, inArray, ne } from "drizzle-orm";
 
 /**
  * 管理端 AI 助手 Router
@@ -23,12 +23,51 @@ export const adminAiRouter = router({
     .mutation(async ({ input }) => {
       const { question } = input;
 
+      const buildFallbackPlan = () => {
+        const normalized = question.replace(/\s+/g, "");
+        const tables: string[] = [];
+        if (normalized.includes("客户") || normalized.includes("线索")) {
+          tables.push("leads");
+        }
+        if (normalized.includes("对话") || normalized.includes("咨询") || normalized.includes("聊天")) {
+          tables.push("conversations");
+        }
+        if (normalized.includes("知识") || normalized.includes("FAQ")) {
+          tables.push("knowledge_base");
+        }
+        if (tables.length === 0) {
+          tables.push("leads");
+        }
+        const isStats = normalized.includes("多少") || normalized.includes("统计") || normalized.includes("数量") || normalized.includes("本月") || normalized.includes("今天");
+        return {
+          queryType: isStats ? "统计查询" : "客户查询",
+          tables,
+          conditions: [],
+          aggregations: [],
+          timeRange: "",
+        };
+      };
+
+      const normalizedQuestion = question.replace(/\s+/g, "");
+      const wantsPicosure = normalizedQuestion.includes("超皮秒");
+      const wantsNoBooking =
+        normalizedQuestion.includes("未预约") ||
+        normalizedQuestion.includes("未面诊") ||
+        normalizedQuestion.includes("未到店");
+      const wantsConsulted =
+        normalizedQuestion.includes("咨询") || normalizedQuestion.includes("聊过");
+
+      const shouldUseKeywordFilter =
+        wantsPicosure && wantsNoBooking && wantsConsulted;
+
       // 第一步：使用 LLM 分析用户问题，生成查询计划
-      const analysisResponse = await invokeLLM({
-        messages: [
-          {
-            role: "system",
-            content: `你是一个医美 CRM 系统的数据分析助手。你的任务是理解管理员的自然语言问题，并生成查询计划。
+      let queryPlan = buildFallbackPlan();
+      try {
+        const analysisResponse = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content: `你是一个医美 CRM 系统的数据分析助手。你的任务是理解管理员的自然语言问题，并生成查询计划。
 
 数据库表结构：
 1. leads（客户线索表）
@@ -67,53 +106,59 @@ export const adminAiRouter = router({
   "aggregations": ["聚合统计描述"],
   "timeRange": "时间范围描述"
 }`,
-          },
-          {
-            role: "user",
-            content: question,
-          },
-        ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "query_plan",
-            strict: true,
-            schema: {
-              type: "object",
-              properties: {
-                queryType: {
-                  type: "string",
-                  description: "查询类型",
+            },
+            {
+              role: "user",
+              content: question,
+            },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "query_plan",
+              strict: true,
+              schema: {
+                type: "object",
+                properties: {
+                  queryType: {
+                    type: "string",
+                    description: "查询类型",
+                  },
+                  tables: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "需要查询的表",
+                  },
+                  conditions: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "查询条件描述",
+                  },
+                  aggregations: {
+                    type: "array",
+                    items: { type: "string" },
+                    description: "聚合统计描述",
+                  },
+                  timeRange: {
+                    type: "string",
+                    description: "时间范围描述",
+                  },
                 },
-                tables: {
-                  type: "array",
-                  items: { type: "string" },
-                  description: "需要查询的表",
-                },
-                conditions: {
-                  type: "array",
-                  items: { type: "string" },
-                  description: "查询条件描述",
-                },
-                aggregations: {
-                  type: "array",
-                  items: { type: "string" },
-                  description: "聚合统计描述",
-                },
-                timeRange: {
-                  type: "string",
-                  description: "时间范围描述",
-                },
+                required: ["queryType", "tables", "conditions", "aggregations", "timeRange"],
+                additionalProperties: false,
               },
-              required: ["queryType", "tables", "conditions", "aggregations", "timeRange"],
-              additionalProperties: false,
             },
           },
-        },
-      });
+        });
 
-      const content = analysisResponse.choices[0].message.content;
-      const queryPlan = JSON.parse(typeof content === 'string' ? content : JSON.stringify(content));
+        const content = analysisResponse.choices[0].message.content;
+        const parsed = JSON.parse(typeof content === "string" ? content : JSON.stringify(content));
+        if (parsed?.tables?.length) {
+          queryPlan = parsed;
+        }
+      } catch (error) {
+        console.warn("[AdminAI] LLM解析失败，使用本地规则:", error);
+      }
 
       // 第二步：根据查询计划执行数据库查询
       const dbInstance = await getDb();
@@ -124,41 +169,115 @@ export const adminAiRouter = router({
       let queryResult: any = null;
 
       // 根据查询类型执行不同的查询
-      if (queryPlan.tables.includes("leads")) {
-        // 客户查询
+      if (shouldUseKeywordFilter) {
+        const keyword = "超皮秒";
+        const matchedMessages = await dbInstance
+          .select({ conversationId: messages.conversationId })
+          .from(messages)
+          .where(
+            and(
+              like(messages.content, `%${keyword}%`),
+              eq(messages.role, "user")
+            )
+          );
+        const conversationIds = Array.from(
+          new Set(matchedMessages.map(row => row.conversationId))
+        ).filter(id => typeof id === "number");
+
+        if (conversationIds.length === 0) {
+          queryResult = {
+            type: "对话列表（超皮秒未预约）",
+            data: [],
+            count: 0,
+          };
+        } else {
+          const results = await dbInstance
+            .select()
+            .from(conversations)
+            .where(
+              and(inArray(conversations.id, conversationIds), ne(conversations.status, "converted"))
+            )
+            .orderBy(desc(conversations.createdAt))
+            .limit(100);
+          queryResult = {
+            type: "对话列表（超皮秒未预约）",
+            data: results,
+            count: results.length,
+          };
+        }
+      } else if (queryPlan.queryType === "统计查询") {
+        const [leadCount] = await dbInstance
+          .select({ count: sql<number>`count(*)` })
+          .from(leads);
+        const [conversationCount] = await dbInstance
+          .select({ count: sql<number>`count(*)` })
+          .from(conversations);
+        const [messageCount] = await dbInstance
+          .select({ count: sql<number>`count(*)` })
+          .from(messages);
+        queryResult = {
+          type: "统计概览",
+          data: {
+            leads: leadCount?.count ?? 0,
+            conversations: conversationCount?.count ?? 0,
+            messages: messageCount?.count ?? 0,
+          },
+        };
+      } else if (queryPlan.tables.includes("conversations")) {
+        const results = await dbInstance
+          .select()
+          .from(conversations)
+          .orderBy(desc(conversations.createdAt))
+          .limit(100);
+        queryResult = {
+          type: "对话列表",
+          data: results,
+          count: results.length,
+        };
+      } else if (queryPlan.tables.includes("leads")) {
         const results = await dbInstance.select().from(leads).limit(100);
         queryResult = {
           type: "客户列表",
           data: results,
           count: results.length,
         };
-      } else if (queryPlan.tables.includes("conversations")) {
-        // 对话查询
-        const results = await dbInstance.select().from(conversations).limit(100);
+      } else if (queryPlan.tables.includes("knowledge_base")) {
+        const results = await dbInstance.select().from(knowledgeBase).limit(100);
         queryResult = {
-          type: "对话列表",
+          type: "知识库列表",
           data: results,
           count: results.length,
         };
       }
 
       // 第三步：使用 LLM 生成自然语言回答
-      const questionText = `问题：${question}\n\n查询计划：${JSON.stringify(queryPlan, null, 2)}\n\n查询结果：${JSON.stringify(queryResult, null, 2)}`;
-      
-      const answerResponse = await invokeLLM({
-        messages: [
-          {
-            role: "system",
-            content: "你是一个医美 CRM 系统的数据分析助手。根据查询结果，用自然语言回答管理员的问题。\n\n要求：\n1. 用清晰、专业的语言描述查询结果\n2. 如果有统计数据，用数字和百分比展示\n3. 如果有列表数据，突出关键信息\n4. 给出可操作的建议",
-          },
-          {
-            role: "user",
-            content: questionText,
-          },
-        ],
-      });
-
-      const answer = answerResponse.choices[0].message.content;
+      let answer = "";
+      try {
+        const questionText = `问题：${question}\n\n查询计划：${JSON.stringify(queryPlan, null, 2)}\n\n查询结果：${JSON.stringify(queryResult, null, 2)}`;
+        const answerResponse = await invokeLLM({
+          messages: [
+            {
+              role: "system",
+              content:
+                "你是一个医美 CRM 系统的数据分析助手。根据查询结果，用自然语言回答管理员的问题。\n\n要求：\n1. 用清晰、专业的语言描述查询结果\n2. 如果有统计数据，用数字和百分比展示\n3. 如果有列表数据，突出关键信息\n4. 给出可操作的建议",
+            },
+            {
+              role: "user",
+              content: questionText,
+            },
+          ],
+        });
+        answer = answerResponse.choices[0].message.content;
+      } catch (error) {
+        console.warn("[AdminAI] LLM回答失败，使用本地摘要:", error);
+        if (queryResult?.type === "统计概览") {
+          answer = `当前共有客户线索 ${queryResult.data.leads} 条，对话会话 ${queryResult.data.conversations} 条，消息记录 ${queryResult.data.messages} 条。`;
+        } else if (queryResult?.type && queryResult?.count !== undefined) {
+          answer = `已为你查询到 ${queryResult.type}，共 ${queryResult.count} 条结果。`;
+        } else {
+          answer = "已为你完成查询，请查看下方结果。";
+        }
+      }
 
       return {
         question,

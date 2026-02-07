@@ -27,8 +27,7 @@ import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 
-const menuItems = [
-  { icon: Cog, label: "系统管理", path: "/dashboard/admin" },
+const mainMenuItems = [
   { icon: Sparkles, label: "AI 助手", path: "/dashboard/ai" },
   { icon: BarChart3, label: "数据分析", path: "/dashboard/analytics" },
   { icon: MessageSquare, label: "对话管理", path: "/dashboard/conversations" },
@@ -37,6 +36,10 @@ const menuItems = [
   { icon: Users, label: "客户管理", path: "/dashboard/customers" },
   { icon: Instagram, label: "小红书运营", path: "/dashboard/xiaohongshu" },
   { icon: Smartphone, label: "企业微信", path: "/dashboard/wework" },
+];
+
+const bottomMenuItems = [
+  { icon: Cog, label: "系统管理", path: "/dashboard/admin" },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -120,7 +123,8 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location);
+  const allMenuItems = [...mainMenuItems, ...bottomMenuItems];
+  const activeMenuItem = allMenuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -178,17 +182,29 @@ function DashboardLayoutContent({
               </button>
               {!isCollapsed ? (
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-semibold tracking-tight truncate">
+                  <button
+                    type="button"
+                    onClick={() => setLocation("/")}
+                    className="font-semibold tracking-tight truncate hover:underline"
+                  >
                     妍美医美 CRM
-                  </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setLocation("/dashboard/admin")}
+                    className="text-xs text-muted-foreground hover:underline"
+                  >
+                    后台
+                  </button>
                 </div>
               ) : null}
             </div>
           </SidebarHeader>
 
-          <SidebarContent className="gap-0">
-            <SidebarMenu className="px-2 py-1">
-              {menuItems.map(item => {
+          <SidebarContent className="gap-0 flex flex-col">
+            {/* 主菜单 */}
+            <SidebarMenu className="px-2 py-1 flex-1">
+              {mainMenuItems.map(item => {
                 const isActive = location === item.path;
                 return (
                   <SidebarMenuItem key={item.path}>
@@ -196,10 +212,6 @@ function DashboardLayoutContent({
                       isActive={isActive}
                       onClick={() => {
                         setLocation(item.path);
-                        // 只在移动端点击后自动收起侧边栏
-                        if (isMobile && state === "expanded") {
-                          toggleSidebar();
-                        }
                       }}
                       tooltip={item.label}
                       className={`h-10 transition-all font-normal`}
@@ -213,6 +225,32 @@ function DashboardLayoutContent({
                 );
               })}
             </SidebarMenu>
+
+            {/* 底部菜单（系统管理） */}
+            <div className="border-t mt-auto">
+              <SidebarMenu className="px-2 py-2">
+                {bottomMenuItems.map(item => {
+                  const isActive = location === item.path;
+                  return (
+                    <SidebarMenuItem key={item.path}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        onClick={() => {
+                          setLocation(item.path);
+                        }}
+                        tooltip={item.label}
+                        className={`h-10 transition-all font-normal`}
+                      >
+                        <item.icon
+                          className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
+                        />
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </div>
           </SidebarContent>
 
           <SidebarFooter className="p-3">

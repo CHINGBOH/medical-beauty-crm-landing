@@ -15,10 +15,20 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script
-      defer
-      src="%VITE_ANALYTICS_ENDPOINT%/umami"
-      data-website-id="%VITE_ANALYTICS_WEBSITE_ID%"></script>
+    <script>
+      const analyticsEndpoint = "%VITE_ANALYTICS_ENDPOINT%";
+      const analyticsWebsiteId = "%VITE_ANALYTICS_WEBSITE_ID%";
+      const isPlaceholder =
+        analyticsEndpoint.includes("%VITE_ANALYTICS_ENDPOINT%") ||
+        analyticsWebsiteId.includes("%VITE_ANALYTICS_WEBSITE_ID%");
+      if (analyticsEndpoint && analyticsWebsiteId && !isPlaceholder) {
+        const script = document.createElement("script");
+        script.defer = true;
+        script.src = `${analyticsEndpoint}/umami`;
+        script.setAttribute("data-website-id", analyticsWebsiteId);
+        document.head.appendChild(script);
+      }
+    </script>
   </body>
 
 </html>

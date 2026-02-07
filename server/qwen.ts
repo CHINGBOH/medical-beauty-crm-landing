@@ -1,7 +1,7 @@
 import axios from "axios";
 
-const QWEN_API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
-const QWEN_API_KEY = process.env.QWEN_API_KEY || "";
+const QWEN_API_URL = process.env.QWEN_API_URL || process.env.BUILT_IN_FORGE_API_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+const QWEN_API_KEY = process.env.QWEN_API_KEY || process.env.BUILT_IN_FORGE_API_KEY || "";
 
 export interface QwenMessage {
   role: "system" | "user" | "assistant";

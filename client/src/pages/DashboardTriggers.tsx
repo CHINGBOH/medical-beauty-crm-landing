@@ -45,6 +45,24 @@ export default function DashboardTriggers() {
     }
   };
 
+  const getConditionText = (trigger: any) => {
+    try {
+      if (trigger.type === "time" && trigger.timeConfig) {
+        const config = JSON.parse(trigger.timeConfig);
+        return JSON.stringify(config, null, 2);
+      } else if (trigger.type === "behavior" && trigger.behaviorConfig) {
+        const config = JSON.parse(trigger.behaviorConfig);
+        return JSON.stringify(config, null, 2);
+      } else if (trigger.type === "weather" && trigger.weatherConfig) {
+        const config = JSON.parse(trigger.weatherConfig);
+        return JSON.stringify(config, null, 2);
+      }
+    } catch (e) {
+      // ignore parse errors
+    }
+    return trigger.timeConfig || trigger.behaviorConfig || trigger.weatherConfig || "未配置";
+  };
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case "time":
@@ -198,8 +216,8 @@ export default function DashboardTriggers() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={trigger.enabled ? "default" : "secondary"}>
-                      {trigger.enabled ? "已启用" : "已禁用"}
+                    <Badge variant={trigger.isActive === 1 ? "default" : "secondary"}>
+                      {trigger.isActive === 1 ? "已启用" : "已禁用"}
                     </Badge>
                     <Button
                       variant="outline"
@@ -226,7 +244,7 @@ export default function DashboardTriggers() {
                   <div>
                     <span className="text-sm font-medium">触发条件：</span>
                     <pre className="mt-1 p-2 bg-muted rounded text-xs overflow-x-auto">
-                      {trigger.condition}
+                      {getConditionText(trigger)}
                     </pre>
                   </div>
                   <div>

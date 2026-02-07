@@ -1,3 +1,4 @@
+import axios from "axios";
 import { z } from "zod";
 import { publicProcedure, router } from "../_core/trpc";
 import {
@@ -21,8 +22,48 @@ import {
   mockCustomerAddEvent,
   isMockMode,
 } from "../wework-mock";
+import {
+  createContactWay as apiCreateContactWay,
+  sendMessage as apiSendMessage,
+  sendTextMessage,
+  isMockMode as apiIsMockMode,
+} from "../wework-api";
 
 export const weworkRouter = router({
+  // 测试连接
+  testConnection: publicProcedure
+    .input(
+      z.object({
+        corpId: z.string(),
+        corpSecret: z.string(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      try {
+        const url = `https://qyapi.weixin.qq.com/cgi-bin/gettoken`;
+        const response = await axios.get(url, {
+          params: {
+            corpid: input.corpId,
+            corpsecret: input.corpSecret,
+          },
+        });
+
+        if (response.data.errcode === 0) {
+          return { success: true };
+        } else {
+          return {
+            success: false,
+            error: `连接失败: ${response.data.errmsg} (错误码: ${response.data.errcode})`,
+          };
+        }
+      } catch (error: any) {
+        return {
+          success: false,
+          error: `网络请求失败: ${error.message}`,
+        };
+      }
+    }),
+
   // 获取配置
   getConfig: publicProcedure.query(async () => {
     const config = await getWeworkConfig();
@@ -58,11 +99,12 @@ export const weworkRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const mockMode = await isMockMode();
+      const mockMode = await apiIsMockMode();
 
+      let result;
       if (mockMode) {
         // 模拟模式
-        const result = await mockCreateContactWay({
+        result = await mockCreateContactWay({
           type: input.type === "single" ? 1 : 2,
           scene: parseInt(input.scene),
           remark: input.remark,
@@ -70,35 +112,42 @@ export const weworkRouter = router({
           state: input.state,
           user: input.userIds,
         });
+      } else {
+        // 真实模式
+        result = await apiCreateContactWay({
+          type: input.type === "single" ? 1 : 2,
+          scene: parseInt(input.scene),
+          remark: input.remark,
+          skip_verify: input.skipVerify,
+          state: input.state,
+          user: input.userIds,
+        });
+      }
 
-        if (result.errcode === 0 && result.config_id && result.qr_code) {
-          // 保存到数据库
-          await createContactWay({
-            configId: result.config_id,
-            type: input.type,
-            scene: input.scene,
-            qrCode: result.qr_code,
-            remark: input.remark,
-            skipVerify: input.skipVerify ? 1 : 0,
-            state: input.state,
-            userIds: input.userIds ? JSON.stringify(input.userIds) : undefined,
-          });
-
-          return {
-            success: true,
-            configId: result.config_id,
-            qrCode: result.qr_code,
-          };
-        }
+      if (result.errcode === 0 && result.config_id && result.qr_code) {
+        // 保存到数据库
+        await createContactWay({
+          configId: result.config_id,
+          type: input.type,
+          scene: input.scene,
+          qrCode: result.qr_code,
+          remark: input.remark,
+          skipVerify: input.skipVerify ? 1 : 0,
+          state: input.state,
+          userIds: input.userIds ? JSON.stringify(input.userIds) : undefined,
+        });
 
         return {
-          success: false,
-          error: result.errmsg,
+          success: true,
+          configId: result.config_id,
+          qrCode: result.qr_code,
         };
       }
 
-      // 真实模式（待实现）
-      throw new Error("真实企业微信 API 尚未实现，请先使用模拟模式");
+      return {
+        success: false,
+        error: result.errmsg,
+      };
     }),
 
   // 获取"联系我"列表
@@ -190,7 +239,7 @@ export const weworkRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const mockMode = await isMockMode();
+      const mockMode = await apiIsMockMode();
 
       // 创建消息记录
       const message = await createWeworkMessage({
@@ -201,31 +250,40 @@ export const weworkRouter = router({
         status: "pending",
       });
 
+      let result;
       if (mockMode) {
         // 模拟发送
-        const result = await mockSendMessage({
+        result = await mockSendMessage({
           touser: input.externalUserId,
           msgtype: input.msgType,
           [input.msgType]: input.content,
         });
-
-        if (result.errcode === 0) {
-          await updateMessageStatus(message.id, "sent");
-          return {
-            success: true,
-            messageId: message.id,
-          };
+      } else {
+        // 真实模式
+        if (input.msgType === "text") {
+          result = await sendTextMessage(input.externalUserId, input.content.content);
         } else {
-          await updateMessageStatus(message.id, "failed", result.errmsg);
-          return {
-            success: false,
-            error: result.errmsg,
-          };
+          result = await apiSendMessage({
+            touser: input.externalUserId,
+            msgtype: input.msgType,
+            [input.msgType]: input.content,
+          });
         }
       }
 
-      // 真实模式（待实现）
-      throw new Error("真实企业微信 API 尚未实现，请先使用模拟模式");
+      if (result.errcode === 0) {
+        await updateMessageStatus(message.id, "sent");
+        return {
+          success: true,
+          messageId: message.id,
+        };
+      } else {
+        await updateMessageStatus(message.id, "failed", result.errmsg);
+        return {
+          success: false,
+          error: result.errmsg,
+        };
+      }
     }),
 
   // 获取消息列表

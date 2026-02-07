@@ -111,13 +111,21 @@ export default function Home() {
               </span>
             </div>
             <div className="flex gap-4">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 size="sm"
-                onClick={() => setLocation("/admin")}
+                onClick={() => setLocation("/dashboard/admin")}
                 className="text-gray-500 hover:text-amber-600"
               >
-                管理
+                后台
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLocation("/dashboard/ai")}
+                className="text-gray-500 hover:text-amber-600"
+              >
+                数据助手
               </Button>
               <Button 
                 variant="ghost" 

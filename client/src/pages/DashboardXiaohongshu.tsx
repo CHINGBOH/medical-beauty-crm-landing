@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Eye, Heart, MessageCircle, Share2, Bookmark, TrendingUp } from "lucide-react";
+import DashboardLayout from "@/components/DashboardLayout";
 // import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardXiaohongshu() {
@@ -28,7 +29,8 @@ export default function DashboardXiaohongshu() {
   const posts = postsData?.posts || [];
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <DashboardLayout>
+      <div className="container mx-auto py-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">小红书运营管理</h1>
@@ -198,6 +200,7 @@ export default function DashboardXiaohongshu() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }
