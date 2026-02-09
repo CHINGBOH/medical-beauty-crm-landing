@@ -147,17 +147,52 @@ export const xiaohongshuRouter = router({
     }),
 
   /**
-   * 获取小红书内容的评论
+   * 获取小红书内容的评论（支持分页）
    */
   getComments: protectedProcedure
     .input(
       z.object({
         postId: z.number(),
         replyStatus: z.enum(["pending", "replied", "ignored"]).optional(),
+        limit: z.number().default(20),
+        offset: z.number().default(0),
       })
     )
     .query(async ({ input }) => {
-      return await getXiaohongshuComments(input.postId, input.replyStatus);
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const { xiaohongshuComments } = await import("../drizzle/schema");
+      
+      let query = db.select().from(xiaohongshuComments)
+        .where(eq(xiaohongshuComments.postId, input.postId));
+
+      if (input.replyStatus) {
+        query = query.where(eq(xiaohongshuComments.replyStatus, input.replyStatus)) as any;
+      }
+
+      const comments = await query
+        .orderBy(desc(xiaohongshuComments.commentedAt))
+        .limit(input.limit)
+        .offset(input.offset);
+
+      // Get total count
+      let countQuery = db.select({ count: sql<number>`count(*)` })
+        .from(xiaohongshuComments)
+        .where(eq(xiaohongshuComments.postId, input.postId));
+
+      if (input.replyStatus) {
+        countQuery = countQuery.where(eq(xiaohongshuComments.replyStatus, input.replyStatus)) as any;
+      }
+
+      const total = await countQuery;
+
+      return {
+        comments,
+        total: total[0]?.count || 0,
+        limit: input.limit,
+        offset: input.offset,
+      };
     }),
 
   /**

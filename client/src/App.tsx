@@ -14,6 +14,9 @@ import DashboardConversations from "./pages/DashboardConversations";
 import DashboardContent from "./pages/DashboardContent";
 import DashboardCustomers from "./pages/DashboardCustomers";
 import DashboardKnowledge from "./pages/DashboardKnowledge";
+import DashboardKnowledgeTree from "./pages/DashboardKnowledgeTree";
+import KnowledgeLibrary from "./pages/KnowledgeLibrary";
+import KnowledgeLibraryEmployee from "./pages/KnowledgeLibraryEmployee";
 import DashboardXiaohongshu from "./pages/DashboardXiaohongshu";
 import DashboardAI from "./pages/DashboardAI";
 import DashboardWework from "./pages/DashboardWework";
@@ -32,6 +35,9 @@ function Router() {
       <Route path={"/dashboard/content"} component={DashboardContent} />
       <Route path={"/dashboard/customers"} component={DashboardCustomers} />
       <Route path={"/dashboard/knowledge"} component={DashboardKnowledge} />
+      <Route path={"/dashboard/knowledge-tree"} component={DashboardKnowledgeTree} />
+      <Route path={"/knowledge"} component={KnowledgeLibrary} />
+      <Route path={"/knowledge/employee"} component={KnowledgeLibraryEmployee} />
       <Route path={"/dashboard/xiaohongshu"} component={DashboardXiaohongshu} />
       <Route path={"/dashboard/ai"} component={DashboardAI} />
       <Route path={"/dashboard/wework"} component={DashboardWework} />

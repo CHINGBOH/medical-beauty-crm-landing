@@ -1,4 +1,4 @@
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, or, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { 
@@ -11,9 +11,13 @@ import {
   messages,
   InsertMessage,
   leads,
-  InsertLead
+  InsertLead,
+  InsertXiaohongshuPost,
+  InsertTrigger,
+  InsertTriggerExecution
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { logger } from './_core/logger';
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -23,8 +27,9 @@ export async function getDb() {
     try {
       const client = postgres(process.env.DATABASE_URL);
       _db = drizzle(client);
+      logger.info("[Database] Connected successfully");
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      logger.error("[Database] Failed to connect:", error);
       _db = null;
     }
   }
@@ -38,8 +43,8 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
+    logger.warn("[Database] Cannot upsert user: database not available");
+    throw new Error("Database connection is not available");
   }
 
   try {
@@ -87,7 +92,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       set: updateSet,
     });
   } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
+    logger.error("[Database] Failed to upsert user:", error);
     throw error;
   }
 }
@@ -95,13 +100,13 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
+    logger.warn("[Database] Cannot get user: database not available");
+    throw new Error("Database connection is not available");
   }
 
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
 
-  return result.length > 0 ? result[0] : undefined;
+  return result[0];
 }
 
 // ==================== 知识库相关 ====================
@@ -113,7 +118,15 @@ export async function createKnowledge(data: InsertKnowledgeBase) {
   await db.insert(knowledgeBase).values(data);
 }
 
-export async function getActiveKnowledge(category?: string, type?: "customer" | "internal") {
+/**
+ * 获取激活的知识库（用于 AI 检索）
+ * 支持按模块、分类、类型筛选
+ */
+export async function getActiveKnowledge(
+  category?: string, 
+  type?: "customer" | "internal",
+  module?: string
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
@@ -124,25 +137,47 @@ export async function getActiveKnowledge(category?: string, type?: "customer" | 
   if (type) {
     conditions.push(eq(knowledgeBase.type, type));
   }
+  if (module) {
+    conditions.push(eq(knowledgeBase.module, module));
+  }
   
   return db.select().from(knowledgeBase)
     .where(and(...conditions))
     .orderBy(desc(knowledgeBase.usedCount));
 }
 
-export async function getAllKnowledge(type?: "customer" | "internal") {
+/**
+ * 获取所有知识库
+ * 支持按类型、模块筛选
+ */
+export async function getAllKnowledge(
+  type?: "customer" | "internal",
+  module?: string
+) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
+  const conditions = [];
   if (type) {
-    return db.select().from(knowledgeBase)
-      .where(eq(knowledgeBase.type, type))
-      .orderBy(desc(knowledgeBase.createdAt));
+    conditions.push(eq(knowledgeBase.type, type));
+  }
+  if (module) {
+    conditions.push(eq(knowledgeBase.module, module));
   }
   
-  return db.select().from(knowledgeBase).orderBy(desc(knowledgeBase.createdAt));
+  if (conditions.length > 0) {
+    return db.select().from(knowledgeBase)
+      .where(and(...conditions))
+      .orderBy(knowledgeBase.order, desc(knowledgeBase.createdAt));
+  }
+  
+  return db.select().from(knowledgeBase)
+    .orderBy(knowledgeBase.order, desc(knowledgeBase.createdAt));
 }
 
+/**
+ * 根据ID获取知识库详情
+ */
 export async function getKnowledgeById(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -154,6 +189,93 @@ export async function getKnowledgeById(id: number) {
   return result[0];
 }
 
+/**
+ * 根据父节点ID获取子节点（支持层级查询）
+ */
+export async function getKnowledgeByParentId(parentId: number | null) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  if (parentId === null) {
+    // 获取根节点（level 1）
+    return db.select().from(knowledgeBase)
+      .where(and(
+        eq(knowledgeBase.level, 1),
+        eq(knowledgeBase.isActive, 1)
+      ))
+      .orderBy(knowledgeBase.order);
+  }
+  
+  return db.select().from(knowledgeBase)
+    .where(and(
+      eq(knowledgeBase.parentId, parentId),
+      eq(knowledgeBase.isActive, 1)
+    ))
+    .orderBy(knowledgeBase.order);
+}
+
+/**
+ * 根据模块获取知识库树形结构
+ */
+export async function getKnowledgeTreeByModule(module: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  // 获取该模块下的所有知识
+  const allKnowledge = await db.select().from(knowledgeBase)
+    .where(and(
+      eq(knowledgeBase.module, module),
+      eq(knowledgeBase.isActive, 1)
+    ))
+    // @ts-ignore - drizzle orderBy支持多个字段
+    .orderBy(knowledgeBase.level, knowledgeBase.order);
+  
+  // 构建树形结构
+  type KnowledgeRow = typeof knowledgeBase.$inferSelect;
+  type KnowledgeNode = KnowledgeRow & { children: KnowledgeNode[] };
+  const knowledgeMap = new Map<number, KnowledgeNode>();
+  const rootNodes: KnowledgeNode[] = [];
+  
+  // 第一遍：创建所有节点的映射
+  for (const item of allKnowledge) {
+    knowledgeMap.set(item.id, { ...item, children: [] });
+  }
+  
+  // 第二遍：构建父子关系
+  for (const item of allKnowledge) {
+    const node = knowledgeMap.get(item.id)!;
+    if (item.parentId === null || item.parentId === undefined) {
+      rootNodes.push(node);
+    } else {
+      const parent = knowledgeMap.get(item.parentId);
+      if (parent) {
+        parent.children.push(node);
+      } else {
+        // 如果找不到父节点，作为根节点
+        rootNodes.push(node);
+      }
+    }
+  }
+  
+  return rootNodes;
+}
+
+/**
+ * 根据路径获取知识库节点
+ */
+export async function getKnowledgeByPath(path: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  return db.select().from(knowledgeBase)
+    .where(eq(knowledgeBase.path, path))
+    .limit(1)
+    .then(result => result[0]);
+}
+
+/**
+ * 更新知识库
+ */
 export async function updateKnowledge(id: number, data: Partial<InsertKnowledgeBase>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -163,13 +285,31 @@ export async function updateKnowledge(id: number, data: Partial<InsertKnowledgeB
     .where(eq(knowledgeBase.id, id));
 }
 
+/**
+ * 删除知识库（软删除：设置为非激活状态）
+ */
 export async function deleteKnowledge(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
-  await db.delete(knowledgeBase).where(eq(knowledgeBase.id, id));
+  // 检查是否有子节点
+  const children = await db.select().from(knowledgeBase)
+    .where(eq(knowledgeBase.parentId, id))
+    .limit(1);
+  
+  if (children.length > 0) {
+    throw new Error("Cannot delete knowledge with children. Please delete children first.");
+  }
+  
+  // 软删除：设置为非激活状态
+  await db.update(knowledgeBase)
+    .set({ isActive: 0 })
+    .where(eq(knowledgeBase.id, id));
 }
 
+/**
+ * 增加知识库使用次数
+ */
 export async function incrementKnowledgeUsage(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
@@ -180,6 +320,56 @@ export async function incrementKnowledgeUsage(id: number) {
       .set({ usedCount: knowledge[0].usedCount + 1 })
       .where(eq(knowledgeBase.id, id));
   }
+}
+
+/**
+ * 增加知识库查看次数
+ */
+export async function incrementKnowledgeView(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const knowledge = await db.select().from(knowledgeBase).where(eq(knowledgeBase.id, id)).limit(1);
+  if (knowledge[0]) {
+    await db.update(knowledgeBase)
+      .set({ viewCount: knowledge[0].viewCount + 1 })
+      .where(eq(knowledgeBase.id, id));
+  }
+}
+
+/**
+ * 搜索知识库（支持关键词、模块、类型）
+ */
+export async function searchKnowledge(
+  keyword: string,
+  module?: string,
+  type?: "customer" | "internal",
+  limit = 20
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const conditions: ReturnType<typeof eq>[] = [
+    eq(knowledgeBase.isActive, 1),
+    // 使用 LIKE 进行模糊搜索（实际应用中可以使用全文搜索）
+    or(
+      like(knowledgeBase.title, `%${keyword}%`),
+      like(knowledgeBase.content, `%${keyword}%`),
+      like(knowledgeBase.summary, `%${keyword}%`)
+    )!
+  ];
+  
+  if (module) {
+    conditions.push(eq(knowledgeBase.module, module));
+  }
+  if (type) {
+    conditions.push(eq(knowledgeBase.type, type));
+  }
+  
+  return db.select().from(knowledgeBase)
+    .where(and(...conditions))
+    .orderBy(desc(knowledgeBase.usedCount), desc(knowledgeBase.viewCount))
+    .limit(limit);
 }
 
 // ==================== 对话相关 ====================
@@ -312,7 +502,7 @@ export async function getXiaohongshuPostById(id: number) {
   return result[0] || null;
 }
 
-export async function createXiaohongshuPost(data: any) {
+export async function createXiaohongshuPost(data: InsertXiaohongshuPost) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
@@ -321,7 +511,7 @@ export async function createXiaohongshuPost(data: any) {
   return { id: result[0]?.id || 0 };
 }
 
-export async function updateXiaohongshuPost(id: number, data: any) {
+export async function updateXiaohongshuPost(id: number, data: Partial<InsertXiaohongshuPost>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
@@ -388,7 +578,7 @@ export async function getTriggerById(id: number) {
   return result[0] || null;
 }
 
-export async function createTrigger(data: any) {
+export async function createTrigger(data: InsertTrigger) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
@@ -397,7 +587,7 @@ export async function createTrigger(data: any) {
   return { id: result[0]?.id || 0 };
 }
 
-export async function updateTrigger(id: number, data: any) {
+export async function updateTrigger(id: number, data: Partial<InsertTrigger>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
@@ -427,11 +617,160 @@ export async function getTriggerExecutions(triggerId: number) {
   return result;
 }
 
-export async function createTriggerExecution(data: any) {
+export async function createTriggerExecution(data: InsertTriggerExecution) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   
   const { triggerExecutions: triggerExecutionsTable } = await import("../drizzle/schema");
   const result = await db.insert(triggerExecutionsTable).values(data).returning({ id: triggerExecutionsTable.id });
   return { id: result[0]?.id || 0 };
+}
+
+// ==================== 医美项目相关 ====================
+
+export async function getAllMedicalProjects(activeOnly = true) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { medicalProjects: projectsTable } = await import("../drizzle/schema");
+  
+  let query = db.select().from(projectsTable);
+  
+  if (activeOnly) {
+    query = query.where(eq(projectsTable.isActive, 1)) as any;
+  }
+  
+  return query.orderBy(projectsTable.sortOrder);
+}
+
+export async function getMedicalProjectById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { medicalProjects: projectsTable } = await import("../drizzle/schema");
+  
+  const result = await db.select().from(projectsTable).where(eq(projectsTable.id, id)).limit(1);
+  return result[0] || null;
+}
+
+export async function getMedicalProjectsByCategory(category: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { medicalProjects: projectsTable } = await import("../drizzle/schema");
+  
+  return db.select().from(projectsTable)
+    .where(and(eq(projectsTable.category, category), eq(projectsTable.isActive, 1)))
+    .orderBy(projectsTable.sortOrder);
+}
+
+// ==================== 网站内容相关 ====================
+
+export async function getWebsiteContent(pageKey: string, sectionKey?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { websiteContent: contentTable } = await import("../drizzle/schema");
+  
+  let query = db.select().from(contentTable)
+    .where(and(eq(contentTable.pageKey, pageKey), eq(contentTable.isActive, 1)));
+  
+  if (sectionKey) {
+    query = query.where(eq(contentTable.sectionKey, sectionKey)) as any;
+  }
+  
+  return query.orderBy(contentTable.sortOrder);
+}
+
+export async function getWebsiteContentById(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { websiteContent: contentTable } = await import("../drizzle/schema");
+  
+  const result = await db.select().from(contentTable).where(eq(contentTable.id, id)).limit(1);
+  return result[0] || null;
+}
+
+export async function createWebsiteContent(data: InsertWebsiteContent) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { websiteContent: contentTable } = await import("../drizzle/schema");
+  const result = await db.insert(contentTable).values(data).returning({ id: contentTable.id });
+  return { id: result[0]?.id || 0 };
+}
+
+export async function updateWebsiteContent(id: number, data: Partial<InsertWebsiteContent>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { websiteContent: contentTable } = await import("../drizzle/schema");
+  await db.update(contentTable).set(data).where(eq(contentTable.id, id));
+  return { success: true };
+}
+
+export async function deleteWebsiteContent(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { websiteContent: contentTable } = await import("../drizzle/schema");
+  await db.update(contentTable).set({ isActive: 0 }).where(eq(contentTable.id, id));
+  return { success: true };
+}
+
+// ==================== 网站导航相关 ====================
+
+export async function getWebsiteNavigation(parentKey?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { websiteNavigation: navTable } = await import("../drizzle/schema");
+  
+  let query = db.select().from(navTable).where(eq(navTable.isActive, 1));
+  
+  if (parentKey) {
+    query = query.where(eq(navTable.parentKey, parentKey)) as any;
+  } else {
+    query = query.where(sql`${navTable.parentKey} IS NULL`) as any;
+  }
+  
+  return query.orderBy(navTable.sortOrder);
+}
+
+export async function getWebsiteNavigationByNavKey(navKey: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { websiteNavigation: navTable } = await import("../drizzle/schema");
+  
+  const result = await db.select().from(navTable).where(eq(navTable.navKey, navKey)).limit(1);
+  return result[0] || null;
+}
+
+export async function createWebsiteNavigation(data: InsertWebsiteNavigation) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { websiteNavigation: navTable } = await import("../drizzle/schema");
+  const result = await db.insert(navTable).values(data).returning({ id: navTable.id });
+  return { id: result[0]?.id || 0 };
+}
+
+export async function updateWebsiteNavigation(id: number, data: Partial<InsertWebsiteNavigation>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { websiteNavigation: navTable } = await import("../drizzle/schema");
+  await db.update(navTable).set(data).where(eq(navTable.id, id));
+  return { success: true };
+}
+
+export async function deleteWebsiteNavigation(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  
+  const { websiteNavigation: navTable } = await import("../drizzle/schema");
+  await db.update(navTable).set({ isActive: 0 }).where(eq(navTable.id, id));
+  return { success: true };
 }

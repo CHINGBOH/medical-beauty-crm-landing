@@ -88,12 +88,19 @@ async function handleCustomerAddEvent(data: {
         state: followUser?.state || data.state,
       });
 
-      console.log(`[企业微信Webhook] 客户已保存: ${contact.name} (${contact.external_userid})`);
+      const { logger } = await import("./_core/logger");
+      logger.info(`[企业微信Webhook] 客户已保存: ${contact.name} (${contact.external_userid})`);
 
       // TODO: 触发自动化营销流程
+      // 计划功能：
+      // 1. 检查是否有匹配的触发器（如：新客户欢迎消息）
+      // 2. 根据客户来源（state）触发相应的营销流程
+      // 3. 发送欢迎消息或引导消息
+      // 当前暂未实现，不影响核心功能
     }
   } catch (error) {
-    console.error("[企业微信Webhook] 处理客户添加事件失败:", error);
+    const { logger } = await import("./_core/logger");
+    logger.error("[企业微信Webhook] 处理客户添加事件失败:", error);
   }
 }
 
@@ -108,7 +115,8 @@ async function handleMessageEvent(data: {
   msgId: string;
 }) {
   try {
-    console.log(`[企业微信Webhook] 收到消息: ${data.externalUserId}, 类型: ${data.msgType}`);
+      const { logger } = await import("./_core/logger");
+      logger.info(`[企业微信Webhook] 收到消息: ${data.externalUserId}, 类型: ${data.msgType}`);
 
     // 保存消息记录
     await createWeworkMessage({
@@ -120,8 +128,14 @@ async function handleMessageEvent(data: {
     });
 
     // TODO: 可选 - 调用AI客服生成自动回复
+    // 计划功能：
+    // 1. 识别客户消息意图
+    // 2. 调用AI客服生成回复
+    // 3. 自动发送回复消息
+    // 当前暂未实现，需要手动回复
   } catch (error) {
-    console.error("[企业微信Webhook] 处理消息事件失败:", error);
+    const { logger } = await import("./_core/logger");
+    logger.error("[企业微信Webhook] 处理消息事件失败:", error);
   }
 }
 

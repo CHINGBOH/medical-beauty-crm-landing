@@ -32,6 +32,7 @@ const mainMenuItems = [
   { icon: BarChart3, label: "数据分析", path: "/dashboard/analytics" },
   { icon: MessageSquare, label: "对话管理", path: "/dashboard/conversations" },
   { icon: BookOpen, label: "知识库管理", path: "/dashboard/knowledge" },
+  { icon: BookOpen, label: "知识库树", path: "/dashboard/knowledge-tree" },
   { icon: FileText, label: "内容管理", path: "/dashboard/content" },
   { icon: Users, label: "客户管理", path: "/dashboard/customers" },
   { icon: Instagram, label: "小红书运营", path: "/dashboard/xiaohongshu" },

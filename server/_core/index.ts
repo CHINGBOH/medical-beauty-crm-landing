@@ -8,6 +8,8 @@ import { registerWeworkWebhookRoutes } from "../wework-webhook";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { restApi } from "../routers/rest-api"; // 导入
+import { validateAndPrint } from "./env-validation";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -29,6 +31,9 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // 在启动前验证环境变量
+  validateAndPrint();
+
   const app = express();
   const server = createServer(app);
   
@@ -42,6 +47,10 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   // OAuth callback under /api/oauth/callback
   registerOAuthRoutes(app);
+
+  // 挂载REST API
+  app.use("/api/rest", restApi);
+
   // tRPC API
   app.use(
     "/api/trpc",

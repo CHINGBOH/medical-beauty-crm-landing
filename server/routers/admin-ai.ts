@@ -289,9 +289,16 @@ export const adminAiRouter = router({
 
   /**
    * 获取 AI 助手对话历史
+   * 
+   * @deprecated 功能暂未实现，计划在后续版本中添加
+   * 当前返回空数组，不会影响现有功能
    */
   getHistory: protectedProcedure.query(async () => {
     // TODO: 实现对话历史记录
+    // 计划功能：
+    // 1. 存储管理员与AI助手的对话记录
+    // 2. 支持按时间、查询类型筛选
+    // 3. 支持导出对话记录
     return [];
   }),
 });

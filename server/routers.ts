@@ -12,6 +12,11 @@ import { xiaohongshuRouter } from "./routers/xiaohongshu";
 import { adminAiRouter } from "./routers/admin-ai";
 import { triggersRouter } from "./routers/triggers";
 import { weworkRouter } from "./routers/wework";
+import { learningPathRouter } from "./routers/learning-path";
+import { vectorSearchRouter } from "./routers/vector-search";
+import { adaptiveLearningRouter } from "./routers/adaptive-learning";
+import { crawlerRouter } from "./routers/crawler";
+import { websiteRouter } from "./routers/website";
 
 export const appRouter = router({
   system: systemRouter,
@@ -29,12 +34,17 @@ export const appRouter = router({
   admin: adminRouter,
   analytics: analyticsRouter,
   knowledge: knowledgeRouter,
+  learningPath: learningPathRouter,
+  vectorSearch: vectorSearchRouter,
+  adaptiveLearning: adaptiveLearningRouter,
   content: contentRouter,
   customers: customersRouter,
   xiaohongshu: xiaohongshuRouter,
   adminAi: adminAiRouter,
   triggers: triggersRouter,
   wework: weworkRouter,
+  crawler: crawlerRouter,
+  website: websiteRouter,
 });
 
 export type AppRouter = typeof appRouter;
