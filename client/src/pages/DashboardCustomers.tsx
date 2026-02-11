@@ -109,7 +109,7 @@ export default function DashboardCustomers() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">客户管理</h1>
             <p className="text-muted-foreground mt-2">
-              客户画像、分层分级、生命周期管理
+              全面了解客户需求，智能分层管理，提升转化效率
             </p>
           </div>
         </div>
@@ -169,7 +169,7 @@ export default function DashboardCustomers() {
               {/* 客户分层筛选 */}
               <Select value={tierFilter} onValueChange={(v) => setTierFilter(v as FilterType)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="客户分层" />
+                  <SelectValue placeholder="客户等级（A/B/C/D级）" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">全部分层</SelectItem>
@@ -183,7 +183,7 @@ export default function DashboardCustomers() {
               {/* 心理类型筛选 */}
               <Select value={psychologyFilter} onValueChange={(v) => setPsychologyFilter(v as PsychologyFilter)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="心理类型" />
+                  <SelectValue placeholder="客户心理画像" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">全部类型</SelectItem>
@@ -220,9 +220,9 @@ export default function DashboardCustomers() {
                       <TableHead>联系方式</TableHead>
                       <TableHead>年龄</TableHead>
                       <TableHead>来源</TableHead>
-                      <TableHead>客户分层</TableHead>
-                      <TableHead>心理类型</TableHead>
-                      <TableHead>消费能力</TableHead>
+                      <TableHead>客户等级</TableHead>
+                      <TableHead>心理画像</TableHead>
+                      <TableHead>预算水平</TableHead>
                       <TableHead>预算</TableHead>
                       <TableHead>状态</TableHead>
                       <TableHead>操作</TableHead>
@@ -268,7 +268,7 @@ export default function DashboardCustomers() {
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium mb-2">暂无客户数据</p>
+                <p className="text-lg font-medium mb-2">暂无客户数据，开始收集线索吧</p>
                 <p className="text-sm">请先导入客户数据或等待客户咨询</p>
               </div>
             )}
@@ -309,15 +309,15 @@ export default function DashboardCustomers() {
                   <div className="text-sm font-medium mb-3">客户画像</div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <div className="text-sm text-muted-foreground mb-1">客户分层</div>
+                      <div className="text-sm text-muted-foreground mb-1">客户等级</div>
                       {getTierBadge(selectedCustomer.customerTier)}
                     </div>
                     <div>
-                      <div className="text-sm text-muted-foreground mb-1">心理类型</div>
+                      <div className="text-sm text-muted-foreground mb-1">心理画像</div>
                       {getPsychologyBadge(selectedCustomer.psychologyType)}
                     </div>
                     <div>
-                      <div className="text-sm text-muted-foreground mb-1">消费能力</div>
+                      <div className="text-sm text-muted-foreground mb-1">预算水平</div>
                       {getBudgetBadge(selectedCustomer.budgetLevel)}
                     </div>
                     <div>

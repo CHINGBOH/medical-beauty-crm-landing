@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { DatabaseButton } from "@/components/ui/database-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,24 +9,32 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { useLocation } from "wouter";
-import { 
-  Sparkles, 
-  Clock, 
-  Shield, 
-  Heart, 
-  CheckCircle2, 
+import {
+  Sparkles,
+  Clock,
+  Shield,
+  Heart,
+  CheckCircle2,
   Star,
   MessageCircle,
   Phone,
-  Calendar
+  Calendar,
+  Zap,
+  User,
+  Mail,
+  Send,
+  ArrowRight,
+  TrendingUp,
+  Award,
+  BookOpen
 } from "lucide-react";
 
 export default function Home() {
   // SEO 优化
   useEffect(() => {
     // 设置页面标题（30-60字符）
-    document.title = "深圳妍美医美门诊部-超皮秒祛斑|水光针|热玛吉|专业医美机构";
-    
+    document.title = "焱磊医美 Liora Yan - Ignite Your Glow | 高端医美定制";
+
     // 设置描述信息（50-160字符）
     let metaDescription = document.querySelector('meta[name="description"]');
     if (!metaDescription) {
@@ -33,8 +42,8 @@ export default function Home() {
       metaDescription.setAttribute('name', 'description');
       document.head.appendChild(metaDescription);
     }
-    metaDescription.setAttribute('content', '深圳妍美医疗美容门诊部提供专业的超皮秒祛斑、水光针、热玛吉等医美项目。采用先进技术，专业医生团队，为您打造完美肌肤。免费预约咨询，在线 AI 客服 24 小时服务。');
-    
+    metaDescription.setAttribute('content', 'Liora Yan 焱磊医美 (Ignite Your Glow) 提供高端定制医美服务。超皮秒、热玛吉、水光针等项目，唤醒您的肌肤光彩。');
+
     // 设置关键词
     let metaKeywords = document.querySelector('meta[name="keywords"]');
     if (!metaKeywords) {
@@ -42,7 +51,7 @@ export default function Home() {
       metaKeywords.setAttribute('name', 'keywords');
       document.head.appendChild(metaKeywords);
     }
-    metaKeywords.setAttribute('content', '深圳医美,妍美医美,超皮秒祛斑,水光针,热玛吉,医美整形,皮肤美容,抽脂塑形,医美门诊部,深圳美容院');
+    metaKeywords.setAttribute('content', '焱磊医美,Liora Yan,Ignite Your Glow,深圳医美,超皮秒,热玛吉,抗衰老,皮肤管理');
   }, []);
 
   const [, setLocation] = useLocation();
@@ -55,6 +64,15 @@ export default function Home() {
     message: "",
   });
 
+  // 智能预约状态
+  const [showSmartBooking, setShowSmartBooking] = useState(false);
+  const [bookingStep, setBookingStep] = useState(0);
+  const [selectedService, setSelectedService] = useState("超皮秒祛斑");
+  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [selectedSlot, setSelectedSlot] = useState<string>("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [smartRecommendation, setSmartRecommendation] = useState<string>("");
+
   const createSession = trpc.chat.createSession.useMutation();
   const submitLead = trpc.chat.convertToLead.useMutation();
 
@@ -64,9 +82,63 @@ export default function Home() {
     return params.get("source") || "官网落地页";
   };
 
+  // 智能推荐服务
+  const getSmartRecommendation = (message: string) => {
+    const lowerMessage = message.toLowerCase();
+    if (lowerMessage.includes("斑") || lowerMessage.includes("色素")) {
+      return "根据您的描述，推荐【超皮秒祛斑】项目，精准击碎色素，效果显著";
+    } else if (lowerMessage.includes("皱纹") || lowerMessage.includes("紧致")) {
+      return "根据您的描述，推荐【热玛吉紧致】项目，重塑肌肤轮廓";
+    } else if (lowerMessage.includes("补水") || lowerMessage.includes("干燥")) {
+      return "根据您的描述，推荐【深层水光】项目，长效补水保湿";
+    } else if (lowerMessage.includes("美白") || lowerMessage.includes("提亮")) {
+      return "根据您的描述，推荐【美白嫩肤】项目，均匀肤色，提亮光泽";
+    }
+    return "";
+  };
+
+  // 生成可用时间段
+  const generateAvailableSlots = () => {
+    const today = new Date();
+    const slots: string[] = [];
+    const timeOptions = ["10:00", "11:00", "14:00", "15:00", "16:00", "17:00"];
+
+    for (let i = 0; i < 3; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      const dateStr = date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', weekday: 'short' });
+      timeOptions.forEach(time => {
+        slots.push(`${dateStr} ${time}`);
+      });
+    }
+    return slots;
+  };
+
+  // 智能预约处理
+  const handleSmartBooking = () => {
+    setShowSmartBooking(true);
+    setBookingStep(0);
+    setAvailableSlots(generateAvailableSlots());
+  };
+
+  // 智能分析用户需求
+  const handleSmartAnalyze = () => {
+    setIsAnalyzing(true);
+    setTimeout(() => {
+      const recommendation = getSmartRecommendation(formData.message);
+      if (recommendation) {
+        setSmartRecommendation(recommendation);
+        toast.success("AI 已为您推荐最适合的项目 ✨");
+      } else {
+        setSmartRecommendation("根据您的需求，专业顾问将为您提供个性化方案");
+      }
+      setIsAnalyzing(false);
+    }, 1500);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name || !formData.phone) {
       toast.error("请填写姓名和手机号");
       return;
@@ -75,14 +147,14 @@ export default function Home() {
     // 创建临时会话用于提交线索
     try {
       const sessionResult = await createSession.mutateAsync();
-      
+
       await submitLead.mutateAsync({
         sessionId: sessionResult.sessionId,
         ...formData,
       });
 
-      toast.success("提交成功！我们会尽快联系您 💝");
-      
+      toast.success("提交成功！我们的专业顾问将在30分钟内与您联系，请保持手机畅通 💝");
+
       // 重置表单
       setFormData({
         name: "",
@@ -92,8 +164,10 @@ export default function Home() {
         budget: "",
         message: "",
       });
+      setShowSmartBooking(false);
+      setBookingStep(0);
     } catch (error) {
-      toast.error("提交失败，请稍后重试");
+      toast.error("提交失败，请检查网络连接或稍后重试。如问题持续，请联系客服");
       console.error(error);
     }
   };
@@ -105,37 +179,44 @@ export default function Home() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src="/yanmei-logo.jpg" alt="深圳妍美" className="h-10 w-10 object-contain" />
-              <span className="text-xl font-bold text-amber-800">
-                深圳妍美医疗美容门诊部
+              <img src="/logo.png" alt="Liora Yan" className="h-8 w-8 object-contain" />
+              <span className="text-lg font-bold text-amber-800 font-serif">
+                焱磊医美
               </span>
             </div>
-            <div className="flex gap-4">
-              <Button 
-                variant="ghost" 
+            <div className="flex gap-3">
+              <DatabaseButton
+                variant="ghost"
                 size="sm"
-                onClick={() => setLocation("/admin")}
-                className="text-gray-500 hover:text-amber-600"
-              >
-                管理
-              </Button>
-              <Button 
-                variant="ghost" 
-                onClick={() => setLocation("/chat")}
+                pageKey="home"
+                buttonKey="consultation"
+                fallbackText="在线咨询"
                 className="gap-2"
+                onClick={() => setLocation("/chat")}
               >
                 <MessageCircle className="w-4 h-4" />
-                在线咨询
-              </Button>
-              <Button 
+              </DatabaseButton>
+              <DatabaseButton
+                variant="ghost"
+                size="sm"
+                pageKey="home"
+                buttonKey="knowledge"
+                fallbackText="知识库"
+                className="gap-2"
+                onClick={() => setLocation("/knowledge")}
+              >
+                <BookOpen className="w-4 h-4" />
+              </DatabaseButton>
+              <DatabaseButton
+                size="sm"
+                pageKey="home"
+                buttonKey="free-consultation"
+                fallbackText="免费面诊咨询"
                 className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700"
                 onClick={() => {
                   document.getElementById("form-section")?.scrollIntoView({ behavior: "smooth" });
                 }}
-              >
-                <Calendar className="w-4 h-4 mr-2" />
-                立即预约
-              </Button>
+              />
             </div>
           </div>
         </div>
@@ -145,54 +226,71 @@ export default function Home() {
       <section className="container mx-auto px-4 py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div>
-            <Badge className="mb-4 bg-amber-100 text-amber-700 hover:bg-amber-200">
-              ⭐ 2024 年度推荐项目
-            </Badge>
-            <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-              超皮秒祛斑
+            <h1 className="text-5xl lg:text-6xl font-bold mb-6 leading-tight font-serif">
+              专业祛斑，安全有效
               <br />
               <span className="bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
-                让肌肤重焕光彩
+                让美成为您一生的事业和陪伴
               </span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-              采用先进的超皮秒激光技术，精准击碎色素颗粒，温和祛除各类色斑。恢复期短，效果持久，让您轻松拥有净白无瑕的肌肤。
+              采用先进的超皮秒激光技术，精准击碎色素颗粒，温和祛除各类色斑。2-3次治疗，90%以上客户满意度，3-5天即可正常化妆，不影响工作，让您轻松拥有净白无瑕的肌肤。
             </p>
             
             <div className="flex flex-wrap gap-4 mb-8">
               <div className="flex items-center gap-2 bg-white px-4 py-3 rounded-full shadow-sm">
                 <Clock className="w-5 h-5 text-amber-600" />
-                <span className="text-sm font-medium">恢复期 3-5 天</span>
+                <span className="text-sm font-medium">3-5天即可正常化妆</span>
               </div>
               <div className="flex items-center gap-2 bg-white px-4 py-3 rounded-full shadow-sm">
                 <Shield className="w-5 h-5 text-amber-600" />
-                <span className="text-sm font-medium">安全无创</span>
+                <span className="text-sm font-medium">FDA认证设备，安全无创</span>
               </div>
               <div className="flex items-center gap-2 bg-white px-4 py-3 rounded-full shadow-sm">
                 <Heart className="w-5 h-5 text-amber-600" />
-                <span className="text-sm font-medium">效果持久</span>
+                <span className="text-sm font-medium">90%以上客户满意度</span>
               </div>
             </div>
 
             <div className="flex gap-4">
-              <Button 
+              <DatabaseButton
                 size="lg"
-                className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-lg px-8"
-                onClick={() => {
-                  document.getElementById("form-section")?.scrollIntoView({ behavior: "smooth" });
-                }}
+                pageKey="home"
+                buttonKey="smart-booking"
+                fallbackText="智能预约"
+                className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-lg px-8 shadow-lg hover:shadow-xl transition-all duration-300 group"
+                onClick={handleSmartBooking}
               >
-                免费预约面诊
-              </Button>
-              <Button 
-                size="lg" 
+                <Zap className="w-5 h-5 mr-2 group-hover:animate-pulse" />
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+              </DatabaseButton>
+              <DatabaseButton
+                size="lg"
                 variant="outline"
+                pageKey="home"
+                buttonKey="ai-consultation"
+                fallbackText="AI 咨询"
+                className="text-lg px-8 border-amber-300 hover:bg-amber-50 group"
                 onClick={() => setLocation("/chat")}
-                className="text-lg px-8 border-amber-300 hover:bg-amber-50"
               >
-                <MessageCircle className="w-5 h-5 mr-2" />
-                咨询顾问
-              </Button>
+                <MessageCircle className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
+              </DatabaseButton>
+            </div>
+
+            {/* 智能提示 */}
+            <div className="mt-6 flex items-center gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-amber-600" />
+                <span>AI 智能推荐</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-600" />
+                <span>30分钟响应</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Award className="w-4 h-4 text-amber-600" />
+                <span>专业医师团队</span>
+              </div>
             </div>
           </div>
 
@@ -332,100 +430,273 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 预约表单 */}
+      {/* 智能预约表单 */}
       <section id="form-section" className="py-20 bg-white">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold mb-4">立即预约免费面诊</h2>
+              <div className="inline-flex items-center gap-2 mb-4">
+                <Zap className="w-6 h-6 text-amber-600" />
+                <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200">
+                  AI 智能预约
+                </Badge>
+              </div>
+              <h2 className="text-4xl font-bold mb-4">智能预约免费面诊</h2>
               <p className="text-gray-600 text-lg">
-                填写您的信息，专业顾问将在 30 分钟内与您联系
+                AI 分析您的需求，推荐最适合的项目，智能匹配最佳时间
               </p>
             </div>
 
             <Card className="border-amber-100 shadow-xl">
               <CardContent className="pt-8">
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
+                  {/* 步骤指示器 */}
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                        bookingStep >= 0 ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-600'
+                      }`}>
+                        1
+                      </div>
+                      <span className="text-sm font-medium">基本信息</span>
+                    </div>
+                    <div className="flex-1 h-1 bg-gray-200 mx-4 rounded">
+                      <div className={`h-full bg-amber-600 rounded transition-all duration-300 ${
+                        bookingStep >= 1 ? 'w-full' : 'w-0'
+                      }`}></div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                        bookingStep >= 1 ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-600'
+                      }`}>
+                        2
+                      </div>
+                      <span className="text-sm font-medium">需求分析</span>
+                    </div>
+                    <div className="flex-1 h-1 bg-gray-200 mx-4 rounded">
+                      <div className={`h-full bg-amber-600 rounded transition-all duration-300 ${
+                        bookingStep >= 2 ? 'w-full' : 'w-0'
+                      }`}></div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                        bookingStep >= 2 ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-600'
+                      }`}>
+                        3
+                      </div>
+                      <span className="text-sm font-medium">选择时间</span>
+                    </div>
+                  </div>
+
+                  {/* 步骤 1: 基本信息 */}
+                  <div className={bookingStep === 0 ? "space-y-6" : "hidden"}>
+                    <div className="grid md:grid-cols-2 gap-6">
+                      <div>
+                        <Label htmlFor="name" className="text-base flex items-center gap-2">
+                          <User className="w-4 h-4" />
+                          姓名 <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="name"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          placeholder="请输入您的真实姓名，方便我们联系您"
+                          className="mt-2 h-12"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="phone" className="text-base flex items-center gap-2">
+                          <Phone className="w-4 h-4" />
+                          手机号 <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="phone"
+                          type="tel"
+                          value={formData.phone}
+                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                          placeholder="请输入11位手机号码，用于接收预约确认"
+                          className="mt-2 h-12"
+                          required
+                        />
+                      </div>
+                    </div>
+
                     <div>
-                      <Label htmlFor="name" className="text-base">
-                        姓名 <span className="text-red-500">*</span>
+                      <Label htmlFor="wechat" className="text-base flex items-center gap-2">
+                        <Mail className="w-4 h-4" />
+                        微信号
                       </Label>
                       <Input
-                        id="name"
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="请输入您的姓名"
+                        id="wechat"
+                        value={formData.wechat}
+                        onChange={(e) => setFormData({ ...formData, wechat: e.target.value })}
+                        placeholder="方便添加您的微信（选填）"
                         className="mt-2 h-12"
-                        required
                       />
                     </div>
+
+                    <DatabaseButton
+                      type="button"
+                      size="lg"
+                      pageKey="home"
+                      buttonKey="next-step-demand-analysis"
+                      fallbackText="下一步：分析需求"
+                      className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-lg h-14"
+                      onClick={() => setBookingStep(1)}
+                      disabled={!formData.name || !formData.phone}
+                    >
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </DatabaseButton>
+                  </div>
+
+                  {/* 步骤 2: 需求分析 */}
+                  <div className={bookingStep === 1 ? "space-y-6" : "hidden"}>
                     <div>
-                      <Label htmlFor="phone" className="text-base">
-                        手机号 <span className="text-red-500">*</span>
+                      <Label htmlFor="message" className="text-base flex items-center gap-2">
+                        <Sparkles className="w-4 h-4" />
+                        您的需求或疑问
                       </Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        placeholder="请输入您的手机号"
-                        className="mt-2 h-12"
-                        required
+                      <Textarea
+                        id="message"
+                        value={formData.message}
+                        onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                        placeholder="告诉我们您的具体需求，AI 将为您推荐最适合的项目..."
+                        className="mt-2 min-h-[120px]"
                       />
+                    </div>
+
+                    {formData.message && (
+                      <DatabaseButton
+                        type="button"
+                        variant="outline"
+                        pageKey="home"
+                        buttonKey="ai-recommendation"
+                        fallbackText="AI 智能推荐项目"
+                        className="w-full border-amber-300 hover:bg-amber-50"
+                        onClick={handleSmartAnalyze}
+                        disabled={isAnalyzing}
+                      >
+                        {isAnalyzing ? (
+                          <>
+                            <Zap className="w-5 h-5 mr-2 animate-spin" />
+                            AI 分析中...
+                          </>
+                        ) : (
+                          <>
+                            <Zap className="w-5 h-5 mr-2" />
+                          </>
+                        )}
+                      </DatabaseButton>
+                    )}
+
+                    {smartRecommendation && (
+                      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <Zap className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-medium text-amber-800 mb-1">AI 推荐结果</p>
+                            <p className="text-sm text-gray-700">{smartRecommendation}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-3">
+                      <DatabaseButton
+                        type="button"
+                        variant="outline"
+                        pageKey="home"
+                        buttonKey="previous-step"
+                        fallbackText="上一步"
+                        className="flex-1"
+                        onClick={() => setBookingStep(0)}
+                      />
+                      <DatabaseButton
+                        type="button"
+                        pageKey="home"
+                        buttonKey="next-step-select-time"
+                        fallbackText="下一步：选择时间"
+                        className="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700"
+                        onClick={() => setBookingStep(2)}
+                      >
+                        <ArrowRight className="w-5 h-5 ml-2" />
+                      </DatabaseButton>
                     </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor="wechat" className="text-base">
-                      微信号
-                    </Label>
-                    <Input
-                      id="wechat"
-                      value={formData.wechat}
-                      onChange={(e) => setFormData({ ...formData, wechat: e.target.value })}
-                      placeholder="方便添加您的微信（选填）"
-                      className="mt-2 h-12"
-                    />
+                  {/* 步骤 3: 选择时间 */}
+                  <div className={bookingStep === 2 ? "space-y-6" : "hidden"}>
+                    <div>
+                      <Label className="text-base flex items-center gap-2 mb-3">
+                        <Calendar className="w-4 h-4" />
+                        选择预约时间
+                      </Label>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {availableSlots.map((slot, index) => (
+                          <button
+                            key={index}
+                            type="button"
+                            onClick={() => setSelectedSlot(slot)}
+                            className={`p-3 text-sm rounded-lg border-2 transition-all ${
+                              selectedSlot === slot
+                                ? 'border-amber-500 bg-amber-50 text-amber-700 font-medium'
+                                : 'border-gray-200 hover:border-amber-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {slot}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {selectedSlot && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle2 className="w-5 h-5 text-green-600" />
+                          <div>
+                            <p className="font-medium text-green-800">已选择时间</p>
+                            <p className="text-sm text-green-700">{selectedSlot}</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-3">
+                      <DatabaseButton
+                        type="button"
+                        variant="outline"
+                        pageKey="home"
+                        buttonKey="previous-step"
+                        fallbackText="上一步"
+                        className="flex-1"
+                        onClick={() => setBookingStep(1)}
+                      />
+                      <DatabaseButton
+                        type="submit"
+                        pageKey="home"
+                        buttonKey="confirm-booking"
+                        fallbackText="确认预约"
+                        className="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-lg h-14"
+                        disabled={submitLead.isPending}
+                      >
+                        {submitLead.isPending ? (
+                          <>
+                            <Zap className="w-5 h-5 mr-2 animate-spin" />
+                            提交中...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-5 h-5 mr-2" />
+                          </>
+                        )}
+                      </DatabaseButton>
+                    </div>
                   </div>
 
-                  <div>
-                    <Label htmlFor="budget" className="text-base">
-                      预算区间
-                    </Label>
-                    <Input
-                      id="budget"
-                      value={formData.budget}
-                      onChange={(e) => setFormData({ ...formData, budget: e.target.value })}
-                      placeholder="如：5000-10000 元（选填）"
-                      className="mt-2 h-12"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="message" className="text-base">
-                      您的需求或疑问
-                    </Label>
-                    <Textarea
-                      id="message"
-                      value={formData.message}
-                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                      placeholder="告诉我们您的具体需求，我们会为您提供专业建议"
-                      className="mt-2 min-h-[120px]"
-                    />
-                  </div>
-
-                  <Button
-                    type="submit"
-                    size="lg"
-                    className="w-full bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-lg h-14"
-                    disabled={submitLead.isPending}
-                  >
-                    {submitLead.isPending ? "提交中..." : "立即预约"}
-                  </Button>
-
-                  <p className="text-center text-sm text-gray-500">
-                    提交即表示您同意我们的隐私政策，我们承诺保护您的个人信息
+                  <p className="text-center text-sm text-gray-500 mt-6">
+                    <Zap className="w-4 h-4 inline mr-1" />
+                    AI 驱动的智能预约系统，为您匹配最优方案
                   </p>
                 </form>
               </CardContent>
@@ -435,42 +706,17 @@ export default function Home() {
       </section>
 
       {/* 底部 */}
-      <footer className="bg-gray-900 text-white py-12">
+      <footer className="bg-gray-900 text-white py-8">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <img src="/yanmei-logo.jpg" alt="深圳妍美" className="h-8 w-8 object-contain" />
-                <span className="text-xl font-bold">深圳妍美</span>
-              </div>
-              <p className="text-gray-400">
-                深圳妍美医疗美容门诊部，专注医美领域，为每一位客户提供安全、专业、个性化的美丽解决方案。
-              </p>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold font-serif">焱磊医美</span>
             </div>
-            <div>
-              <h3 className="font-semibold mb-4">联系我们</h3>
-              <div className="space-y-2 text-gray-400">
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4" />
-                  <span>400-XXX-XXXX</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MessageCircle className="w-4 h-4" />
-                  <span>在线咨询：9:00-21:00</span>
-                </div>
-              </div>
+            <div className="flex items-center gap-6 text-gray-400 text-sm">
+              <span>服务时间：9:00 - 21:00</span>
+              <span>|</span>
+              <span>© 2026 Liora Yan. All rights reserved.</span>
             </div>
-            <div>
-              <h3 className="font-semibold mb-4">服务时间</h3>
-              <p className="text-gray-400">
-                周一至周日：9:00 - 21:00
-                <br />
-                节假日正常营业
-              </p>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400 text-sm">
-            <p>© 2024 深圳妍美医疗美容门诊部. All rights reserved.</p>
           </div>
         </div>
       </footer>

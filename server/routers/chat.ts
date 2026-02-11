@@ -150,11 +150,11 @@ export const chatRouter = router({
         
         // 同步对话到 Airtable
         const updatedConversation = await getConversationBySessionId(sessionId);
-        if (updatedConversation && updatedConversation.visitorPhone) {
+        if (updatedConversation) {
           await syncConversationToAirtable({
             sessionId: updatedConversation.sessionId,
             visitorName: updatedConversation.visitorName || undefined,
-            visitorPhone: updatedConversation.visitorPhone,
+            visitorPhone: updatedConversation.visitorPhone || undefined,
             visitorWechat: updatedConversation.visitorWechat || undefined,
             messages: history.map(h => ({
               role: h.role,

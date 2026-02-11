@@ -3,8 +3,10 @@ import { AIChatBox } from "@/components/AIChatBox";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { DatabaseButton } from "@/components/ui/database-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useLocation } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +22,7 @@ type ChatMessage = {
 };
 
 export default function Chat() {
+  const [, setLocation] = useLocation();
   const [sessionId, setSessionId] = useState<string>("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -47,10 +50,10 @@ export default function Chat() {
         // 添加欢迎消息
         setMessages([{
           role: "assistant",
-          content: "您好！我是您的医美咨询顾问 😊\n\n很高兴为您服务！请问有什么可以帮助您的吗？您可以咨询：\n\n✨ 医美项目介绍（超皮秒、水光针、热玛吉等）\n✨ 适合的治疗方案\n✨ 价格和优惠信息\n✨ 预约到店面诊\n\n请随时告诉我您的需求~"
+          content: "您好！我是您的专属医美咨询顾问 😊\n\n很高兴为您服务！我们是一家专业的医美机构，拥有10年以上的临床经验，致力于帮助每一位客户安全、有效地变美。\n\n我可以为您提供：\n\n✨ 专业医美项目介绍（超皮秒、水光针、热玛吉等）\n✨ 个性化治疗方案推荐\n✨ 价格和优惠信息咨询\n✨ 免费面诊预约服务\n\n请随时告诉我您的需求，我会用专业和温暖的态度为您服务~"
         }]);
       } catch (error) {
-        toast.error("创建会话失败");
+        toast.error("连接失败，请检查网络后重试");
         console.error(error);
       }
     };
@@ -89,11 +92,11 @@ export default function Chat() {
         }));
       }
     } catch (error) {
-      toast.error("发送消息失败");
+      toast.error("消息发送失败，请稍后再试，如持续出现问题请联系客服");
       console.error(error);
       setMessages(prev => [...prev, { 
         role: "assistant", 
-        content: "抱歉，我遇到了一些问题，请稍后再试。" 
+        content: "抱歉，网络有点慢，请稍后再试。如果问题持续，您可以拨打客服热线或稍后重试。" 
       }]);
     } finally {
       setIsLoading(false);
@@ -113,19 +116,36 @@ export default function Chat() {
       });
 
       if (result.success) {
-        toast.success("信息已提交，我们会尽快联系您！");
+        toast.success("预约信息已提交成功！我们的顾问将在1小时内与您联系，请保持手机畅通 💝");
         setShowLeadForm(false);
       } else {
-        toast.error(result.error || "提交失败");
+        toast.error(result.error || "提交失败，请检查网络连接或稍后重试。如问题持续，请联系客服");
       }
     } catch (error) {
-      toast.error("提交失败，请稍后重试");
+      toast.error("提交失败，请检查网络连接或稍后重试。如问题持续，请联系客服");
       console.error(error);
     }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50">
+      <nav className="bg-white/80 backdrop-blur-sm border-b border-amber-100 sticky top-0 z-50">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-lg font-semibold text-amber-800">在线咨询</span>
+            </div>
+            <div className="flex gap-3">
+              <DatabaseButton variant="ghost" size="sm" pageKey="chat" buttonKey="back-to-home" fallbackText="返回前台" onClick={() => setLocation("/")}>
+              </DatabaseButton>
+              <DatabaseButton variant="ghost" size="sm" pageKey="chat" buttonKey="admin-panel" fallbackText="后台管理" onClick={() => setLocation("/dashboard/admin")}>
+              </DatabaseButton>
+              <DatabaseButton variant="ghost" size="sm" pageKey="chat" buttonKey="data-assistant" fallbackText="数据助手" onClick={() => setLocation("/dashboard/ai")}>
+              </DatabaseButton>
+            </div>
+          </div>
+        </div>
+      </nav>
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           {/* 头部 */}
@@ -140,13 +160,14 @@ export default function Chat() {
 
           {/* 留资按钮 */}
           <div className="mb-4 text-center">
-            <Button
+            <DatabaseButton
               size="lg"
+              pageKey="chat"
+              buttonKey="free-consultation"
+              fallbackText="💝 免费咨询，专业顾问1对1服务"
               onClick={() => setShowLeadForm(true)}
               className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white px-8 py-4 text-base rounded-full shadow-lg hover:shadow-xl transition-all"
-            >
-              💝 预约面诊 / 留下联系方式
-            </Button>
+            />
           </div>
 
           {/* 聊天界面 */}
@@ -180,7 +201,7 @@ export default function Chat() {
                 onChange={(e) =>
                   setLeadData({ ...leadData, name: e.target.value })
                 }
-                placeholder="请输入您的姓名"
+                placeholder="请输入您的真实姓名，方便我们联系您"
               />
             </div>
             <div className="grid gap-2">
@@ -191,7 +212,7 @@ export default function Chat() {
                 onChange={(e) =>
                   setLeadData({ ...leadData, phone: e.target.value })
                 }
-                placeholder="请输入您的手机号"
+                placeholder="请输入11位手机号码，用于接收预约确认"
               />
             </div>
             <div className="grid gap-2">
@@ -213,7 +234,7 @@ export default function Chat() {
                 onChange={(e) =>
                   setLeadData({ ...leadData, budget: e.target.value })
                 }
-                placeholder="如：5000-10000元（选填）"
+                placeholder="您的预算范围，如：5000-10000元（选填，帮助我们推荐合适方案）"
               />
             </div>
             <div className="grid gap-2">
@@ -224,19 +245,20 @@ export default function Chat() {
                 onChange={(e) =>
                   setLeadData({ ...leadData, message: e.target.value })
                 }
-                placeholder="其他想说的话（选填）"
+                placeholder="还有什么想了解的？告诉我们您的具体需求（选填）"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button
+            <DatabaseButton
               type="submit"
+              pageKey="chat"
+              buttonKey="submit-lead"
+              fallbackText={convertToLead.isPending ? "提交中..." : "提交"}
               onClick={handleConvertToLead}
               disabled={convertToLead.isPending}
               className="w-full"
-            >
-              {convertToLead.isPending ? "提交中..." : "提交"}
-            </Button>
+            />
           </DialogFooter>
         </DialogContent>
       </Dialog>

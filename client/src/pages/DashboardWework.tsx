@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Smartphone, QrCode, Users, MessageSquare, Plus, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Smartphone, QrCode, Users, MessageSquare, Plus, Loader2, CheckCircle2, AlertCircle, Save, RefreshCw } from "lucide-react";
 
 export default function DashboardWework() {
   const [activeTab, setActiveTab] = useState("config");
@@ -17,8 +20,70 @@ export default function DashboardWework() {
   
   const createContactWay = trpc.wework.createContactWay.useMutation();
   const mockAddCustomer = trpc.wework.mockAddCustomer.useMutation();
+  const saveConfig = trpc.wework.saveConfig.useMutation();
+  const testConnection = trpc.wework.testConnection.useMutation();
   
-  const isMockMode = config.data?.isMockMode === 1;
+  const [formData, setFormData] = useState({
+    corpId: "",
+    corpSecret: "",
+    agentId: "",
+    token: "",
+    encodingAesKey: "",
+    isMockMode: true,
+  });
+
+  useEffect(() => {
+    if (config.data) {
+      setFormData({
+        corpId: config.data.corpId || "",
+        corpSecret: config.data.corpSecret || "",
+        agentId: config.data.agentId?.toString() || "",
+        token: config.data.token || "",
+        encodingAesKey: config.data.encodingAesKey || "",
+        isMockMode: config.data.isMockMode === 1,
+      });
+    }
+  }, [config.data]);
+  
+  const isMockMode = formData.isMockMode;
+  
+  const handleSaveConfig = async () => {
+    try {
+      await saveConfig.mutateAsync({
+        ...formData,
+        agentId: formData.agentId ? parseInt(formData.agentId) : undefined,
+        isMockMode: formData.isMockMode ? 1 : 0,
+      });
+      toast.success("配置已保存");
+      config.refetch();
+    } catch (error) {
+      toast.error("保存失败");
+      console.error(error);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (!formData.corpId || !formData.corpSecret) {
+      toast.error("请先填写 Corp ID 和 Corp Secret");
+      return;
+    }
+    
+    try {
+      const result = await testConnection.mutateAsync({
+        corpId: formData.corpId,
+        corpSecret: formData.corpSecret,
+      });
+      
+      if (result.success) {
+        toast.success("连接测试成功！凭证有效。");
+      } else {
+        toast.error(`连接测试失败: ${result.error}`);
+      }
+    } catch (error) {
+      toast.error("连接测试发生错误");
+      console.error(error);
+    }
+  };
   
   const handleCreateContactWay = async () => {
     try {
@@ -140,12 +205,23 @@ export default function DashboardWework() {
               <CardHeader>
                 <CardTitle>企业微信配置</CardTitle>
                 <CardDescription>
-                  {isMockMode
-                    ? "当前为模拟模式，无需配置真实凭证即可测试功能"
-                    : "配置企业微信应用凭证"}
+                  配置企业微信应用凭证，连接您的企业微信
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div className="space-y-1">
+                    <Label className="text-base">模拟模式</Label>
+                    <p className="text-sm text-gray-500">
+                      开启后将使用模拟数据，无需真实凭证即可测试功能
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.isMockMode}
+                    onCheckedChange={(checked) => setFormData({ ...formData, isMockMode: checked })}
+                  />
+                </div>
+
                 {isMockMode ? (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-6">
                     <div className="flex items-start gap-3">
@@ -163,19 +239,106 @@ export default function DashboardWework() {
                           <p>✓ 可以测试消息推送功能</p>
                           <p>✓ 所有数据保存在数据库中</p>
                         </div>
-                        <p className="text-sm text-green-700 mt-4 font-medium">
-                          等企业微信认证通过后，只需在系统管理中切换到真实模式并填写凭证即可。
-                        </p>
                       </div>
                     </div>
                   </div>
                 ) : (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-sm text-blue-800">
-                      真实模式配置功能开发中...
-                    </p>
+                  <div className="space-y-4 border p-4 rounded-lg">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="corpId">企业ID (CorpID)</Label>
+                        <Input
+                          id="corpId"
+                          value={formData.corpId}
+                          onChange={(e) => setFormData({ ...formData, corpId: e.target.value })}
+                          placeholder="ww..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="agentId">应用ID (AgentId)</Label>
+                        <Input
+                          id="agentId"
+                          value={formData.agentId}
+                          onChange={(e) => setFormData({ ...formData, agentId: e.target.value })}
+                          placeholder="1000001"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="corpSecret">应用密钥 (Secret)</Label>
+                      <Input
+                        id="corpSecret"
+                        type="password"
+                        value={formData.corpSecret}
+                        onChange={(e) => setFormData({ ...formData, corpSecret: e.target.value })}
+                        placeholder="应用 Secret"
+                      />
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="token">回调 Token</Label>
+                        <Input
+                          id="token"
+                          value={formData.token}
+                          onChange={(e) => setFormData({ ...formData, token: e.target.value })}
+                          placeholder="接收消息服务器配置 Token"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="encodingAesKey">回调 EncodingAESKey</Label>
+                        <Input
+                          id="encodingAesKey"
+                          value={formData.encodingAesKey}
+                          onChange={(e) => setFormData({ ...formData, encodingAesKey: e.target.value })}
+                          placeholder="接收消息服务器配置 EncodingAESKey"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-2">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={handleTestConnection}
+                        disabled={testConnection.isPending}
+                      >
+                        {testConnection.isPending ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            测试中...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                            测试连接
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 )}
+
+                <div className="flex justify-end pt-4 border-t">
+                  <Button 
+                    onClick={handleSaveConfig}
+                    disabled={saveConfig.isPending}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {saveConfig.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        保存中...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" />
+                        保存配置
+                      </>
+                    )}
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

@@ -1,319 +1,545 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { pgTable, check, serial, varchar, text, integer, timestamp, numeric, unique, index, foreignKey, boolean, jsonb } from "drizzle-orm/pg-core"
+import { sql } from "drizzle-orm"
 
-/**
- * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
- */
-export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
-  id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
-  name: text("name"),
-  email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
-});
 
-export type User = typeof users.$inferSelect;
-export type InsertUser = typeof users.$inferInsert;
 
-/**
- * 系统配置表 - 存储 Airtable 等第三方服务配置
- */
-export const systemConfig = mysqlTable("system_config", {
-  id: int("id").autoincrement().primaryKey(),
-  configKey: varchar("config_key", { length: 100 }).notNull().unique(),
-  configValue: text("config_value"), // JSON 格式存储
-  description: text("description"),
-  isActive: int("is_active").default(1).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
-});
+export const knowledgeBase = pgTable("knowledge_base", {
+	id: serial().primaryKey().notNull(),
+	type: varchar({ length: 20 }).default('customer').notNull(),
+	title: varchar({ length: 255 }).notNull(),
+	content: text().notNull(),
+	category: varchar({ length: 100 }).notNull(),
+	tags: text(),
+	embedding: text(),
+	viewCount: integer("view_count").default(0).notNull(),
+	usedCount: integer("used_count").default(0).notNull(),
+	isActive: integer("is_active").default(1).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
+	embeddingJson: text("embedding_json"),
+	qualityScore: numeric("quality_score", { precision: 3, scale:  2 }).default('0.00'),
+	estimatedReadTime: integer("estimated_read_time").default(5),
+	version: varchar({ length: 20 }).default('1.0'),
+	lastReviewedAt: timestamp("last_reviewed_at", { mode: 'string' }),
+	parentId: integer("parent_id"),
+	level: integer().default(1).notNull(),
+	path: text(),
+	order: integer().default(0).notNull(),
+	module: varchar({ length: 50 }).default('skin_care').notNull(),
+	subCategory: varchar("sub_category", { length: 100 }),
+	summary: text(),
+	positiveEvidence: text("positive_evidence"),
+	negativeEvidence: text("negative_evidence"),
+	neutralAnalysis: text("neutral_analysis"),
+	practicalGuide: text("practical_guide"),
+	caseStudies: text("case_studies"),
+	expertOpinions: text("expert_opinions"),
+	images: text(),
+	videos: text(),
+	audio: text(),
+	sources: text(),
+	credibility: integer().default(5).notNull(),
+	difficulty: varchar({ length: 20 }).default('beginner'),
+	likeCount: integer("like_count").default(0).notNull(),
+	shareCount: integer("share_count").default(0).notNull(),
+}, (table) => [
+	check("knowledge_base_id_not_null", sql`NOT NULL id`),
+	check("knowledge_base_type_not_null", sql`NOT NULL type`),
+	check("knowledge_base_title_not_null", sql`NOT NULL title`),
+	check("knowledge_base_content_not_null", sql`NOT NULL content`),
+	check("knowledge_base_category_not_null", sql`NOT NULL category`),
+	check("knowledge_base_view_count_not_null", sql`NOT NULL view_count`),
+	check("knowledge_base_used_count_not_null", sql`NOT NULL used_count`),
+	check("knowledge_base_is_active_not_null", sql`NOT NULL is_active`),
+	check("knowledge_base_created_at_not_null", sql`NOT NULL created_at`),
+	check("knowledge_base_updated_at_not_null", sql`NOT NULL updated_at`),
+	check("knowledge_base_level_not_null", sql`NOT NULL level`),
+	check("knowledge_base_order_not_null", sql`NOT NULL "order"`),
+	check("knowledge_base_module_not_null", sql`NOT NULL module`),
+	check("knowledge_base_credibility_not_null", sql`NOT NULL credibility`),
+	check("knowledge_base_like_count_not_null", sql`NOT NULL like_count`),
+	check("knowledge_base_share_count_not_null", sql`NOT NULL share_count`),
+]);
 
-export type SystemConfig = typeof systemConfig.$inferSelect;
-export type InsertSystemConfig = typeof systemConfig.$inferInsert;
+export const triggerExecutions = pgTable("trigger_executions", {
+	id: serial().primaryKey().notNull(),
+	triggerId: integer("trigger_id").notNull(),
+	leadId: integer("lead_id"),
+	executedAt: timestamp("executed_at", { mode: 'string' }).defaultNow().notNull(),
+	status: varchar({ length: 20 }).notNull(),
+	result: text(),
+	errorMessage: text("error_message"),
+}, (table) => [
+	check("trigger_executions_id_not_null", sql`NOT NULL id`),
+	check("trigger_executions_trigger_id_not_null", sql`NOT NULL trigger_id`),
+	check("trigger_executions_executed_at_not_null", sql`NOT NULL executed_at`),
+	check("trigger_executions_status_not_null", sql`NOT NULL status`),
+]);
 
-/**
- * 知识库表 - 存储医美项目知识、FAQ、注意事项等
- * 支持两种类型：customer（客户问询）和 internal（内部管理）
- */
-export const knowledgeBase = mysqlTable("knowledge_base", {
-  id: int("id").autoincrement().primaryKey(),
-  type: mysqlEnum("type", ["customer", "internal"]).default("customer").notNull(), // customer=客户问询知识库, internal=内部管理知识库
-  title: varchar("title", { length: 255 }).notNull(),
+export const weworkContactWay = pgTable("wework_contact_way", {
+	id: serial().primaryKey().notNull(),
+	configId: varchar("config_id", { length: 100 }).notNull(),
+	type: varchar({ length: 10 }).default('single').notNull(),
+	scene: varchar({ length: 10 }).default('1').notNull(),
+	qrCode: text("qr_code"),
+	remark: varchar({ length: 255 }),
+	skipVerify: integer("skip_verify").default(1).notNull(),
+	state: varchar({ length: 100 }),
+	userIds: text("user_ids"),
+	isActive: integer("is_active").default(1).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	unique("wework_contact_way_config_id_key").on(table.configId),
+	check("wework_contact_way_id_not_null", sql`NOT NULL id`),
+	check("wework_contact_way_config_id_not_null", sql`NOT NULL config_id`),
+	check("wework_contact_way_type_not_null", sql`NOT NULL type`),
+	check("wework_contact_way_scene_not_null", sql`NOT NULL scene`),
+	check("wework_contact_way_skip_verify_not_null", sql`NOT NULL skip_verify`),
+	check("wework_contact_way_is_active_not_null", sql`NOT NULL is_active`),
+	check("wework_contact_way_created_at_not_null", sql`NOT NULL created_at`),
+	check("wework_contact_way_updated_at_not_null", sql`NOT NULL updated_at`),
+]);
+
+export const weworkMessages = pgTable("wework_messages", {
+	id: serial().primaryKey().notNull(),
+	externalUserId: varchar("external_user_id", { length: 100 }).notNull(),
+	sendUserId: varchar("send_user_id", { length: 100 }).notNull(),
+	msgType: varchar("msg_type", { length: 20 }).notNull(),
+	content: text().notNull(),
+	status: varchar({ length: 20 }).default('pending').notNull(),
+	errorMsg: text("error_msg"),
+	sentAt: timestamp("sent_at", { mode: 'string' }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	check("wework_messages_id_not_null", sql`NOT NULL id`),
+	check("wework_messages_external_user_id_not_null", sql`NOT NULL external_user_id`),
+	check("wework_messages_send_user_id_not_null", sql`NOT NULL send_user_id`),
+	check("wework_messages_msg_type_not_null", sql`NOT NULL msg_type`),
+	check("wework_messages_content_not_null", sql`NOT NULL content`),
+	check("wework_messages_status_not_null", sql`NOT NULL status`),
+	check("wework_messages_created_at_not_null", sql`NOT NULL created_at`),
+]);
+
+export const systemConfig = pgTable("system_config", {
+	id: serial().primaryKey().notNull(),
+	configKey: varchar("config_key", { length: 100 }).notNull(),
+	configValue: text("config_value"),
+	description: text(),
+	isActive: integer("is_active").default(1).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	unique("system_config_config_key_key").on(table.configKey),
+	check("system_config_id_not_null", sql`NOT NULL id`),
+	check("system_config_config_key_not_null", sql`NOT NULL config_key`),
+	check("system_config_is_active_not_null", sql`NOT NULL is_active`),
+	check("system_config_created_at_not_null", sql`NOT NULL created_at`),
+	check("system_config_updated_at_not_null", sql`NOT NULL updated_at`),
+]);
+
+export const xiaohongshuPosts = pgTable("xiaohongshu_posts", {
+	id: serial().primaryKey().notNull(),
+	title: varchar({ length: 255 }).notNull(),
+	content: text().notNull(),
+	images: text(),
+	tags: text(),
+	contentType: varchar("content_type", { length: 50 }).notNull(),
+	project: varchar({ length: 100 }),
+	status: varchar({ length: 20 }).default('draft').notNull(),
+	publishedAt: timestamp("published_at", { mode: 'string' }),
+	scheduledAt: timestamp("scheduled_at", { mode: 'string' }),
+	viewCount: integer("view_count").default(0).notNull(),
+	likeCount: integer("like_count").default(0).notNull(),
+	commentCount: integer("comment_count").default(0).notNull(),
+	shareCount: integer("share_count").default(0).notNull(),
+	collectCount: integer("collect_count").default(0).notNull(),
+	lastSyncedAt: timestamp("last_synced_at", { mode: 'string' }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	check("xiaohongshu_posts_id_not_null", sql`NOT NULL id`),
+	check("xiaohongshu_posts_title_not_null", sql`NOT NULL title`),
+	check("xiaohongshu_posts_content_not_null", sql`NOT NULL content`),
+	check("xiaohongshu_posts_content_type_not_null", sql`NOT NULL content_type`),
+	check("xiaohongshu_posts_status_not_null", sql`NOT NULL status`),
+	check("xiaohongshu_posts_view_count_not_null", sql`NOT NULL view_count`),
+	check("xiaohongshu_posts_like_count_not_null", sql`NOT NULL like_count`),
+	check("xiaohongshu_posts_comment_count_not_null", sql`NOT NULL comment_count`),
+	check("xiaohongshu_posts_share_count_not_null", sql`NOT NULL share_count`),
+	check("xiaohongshu_posts_collect_count_not_null", sql`NOT NULL collect_count`),
+	check("xiaohongshu_posts_created_at_not_null", sql`NOT NULL created_at`),
+	check("xiaohongshu_posts_updated_at_not_null", sql`NOT NULL updated_at`),
+]);
+
+export const weworkCustomers = pgTable("wework_customers", {
+	id: serial().primaryKey().notNull(),
+	externalUserId: varchar("external_user_id", { length: 100 }).notNull(),
+	name: varchar({ length: 100 }),
+	avatar: text(),
+	type: varchar({ length: 10 }).default('1').notNull(),
+	gender: varchar({ length: 10 }).default('0').notNull(),
+	unionId: varchar("union_id", { length: 100 }),
+	position: varchar({ length: 100 }),
+	corpName: varchar("corp_name", { length: 200 }),
+	corpFullName: varchar("corp_full_name", { length: 200 }),
+	externalProfile: text("external_profile"),
+	followUserId: varchar("follow_user_id", { length: 100 }),
+	remark: varchar({ length: 255 }),
+	description: text(),
+	createTime: timestamp("create_time", { mode: 'string' }),
+	tags: text(),
+	state: varchar({ length: 100 }),
+	conversationId: integer("conversation_id"),
+	leadId: varchar("lead_id", { length: 100 }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	unique("wework_customers_external_user_id_key").on(table.externalUserId),
+	check("wework_customers_id_not_null", sql`NOT NULL id`),
+	check("wework_customers_external_user_id_not_null", sql`NOT NULL external_user_id`),
+	check("wework_customers_type_not_null", sql`NOT NULL type`),
+	check("wework_customers_gender_not_null", sql`NOT NULL gender`),
+	check("wework_customers_created_at_not_null", sql`NOT NULL created_at`),
+	check("wework_customers_updated_at_not_null", sql`NOT NULL updated_at`),
+]);
+
+export const conversations = pgTable("conversations", {
+	id: serial().primaryKey().notNull(),
+	sessionId: varchar("session_id", { length: 64 }).notNull(),
+	visitorName: varchar("visitor_name", { length: 100 }),
+	visitorPhone: varchar("visitor_phone", { length: 20 }),
+	visitorWechat: varchar("visitor_wechat", { length: 100 }),
+	source: varchar({ length: 50 }).default('web').notNull(),
+	status: varchar({ length: 20 }).default('active').notNull(),
+	leadId: varchar("lead_id", { length: 100 }),
+	psychologyType: varchar("psychology_type", { length: 20 }),
+	psychologyTags: text("psychology_tags"),
+	budgetLevel: varchar("budget_level", { length: 20 }),
+	customerTier: varchar("customer_tier", { length: 10 }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	unique("conversations_session_id_key").on(table.sessionId),
+	check("conversations_id_not_null", sql`NOT NULL id`),
+	check("conversations_session_id_not_null", sql`NOT NULL session_id`),
+	check("conversations_source_not_null", sql`NOT NULL source`),
+	check("conversations_status_not_null", sql`NOT NULL status`),
+	check("conversations_created_at_not_null", sql`NOT NULL created_at`),
+	check("conversations_updated_at_not_null", sql`NOT NULL updated_at`),
+]);
+
+export const leads = pgTable("leads", {
+	id: serial().primaryKey().notNull(),
+	airtableId: varchar("airtable_id", { length: 100 }),
+	name: varchar({ length: 100 }).notNull(),
+	phone: varchar({ length: 20 }).notNull(),
+	wechat: varchar({ length: 100 }),
+	age: integer(),
+	interestedServices: text("interested_services"),
+	budget: varchar({ length: 50 }),
+	budgetLevel: varchar("budget_level", { length: 20 }),
+	message: text(),
+	source: varchar({ length: 50 }).notNull(),
+	sourceContent: varchar("source_content", { length: 255 }),
+	status: varchar({ length: 50 }).default('new').notNull(),
+	psychologyType: varchar("psychology_type", { length: 50 }),
+	psychologyTags: text("psychology_tags"),
+	customerTier: varchar("customer_tier", { length: 10 }),
+	notes: text(),
+	followUpDate: timestamp("follow_up_date", { mode: 'string' }),
+	conversationId: integer("conversation_id"),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
+	syncedAt: timestamp("synced_at", { mode: 'string' }),
+}, (table) => [
+	unique("leads_airtable_id_key").on(table.airtableId),
+	check("leads_id_not_null", sql`NOT NULL id`),
+	check("leads_name_not_null", sql`NOT NULL name`),
+	check("leads_phone_not_null", sql`NOT NULL phone`),
+	check("leads_source_not_null", sql`NOT NULL source`),
+	check("leads_status_not_null", sql`NOT NULL status`),
+	check("leads_created_at_not_null", sql`NOT NULL created_at`),
+	check("leads_updated_at_not_null", sql`NOT NULL updated_at`),
+]);
+
+export const triggers = pgTable("triggers", {
+	id: serial().primaryKey().notNull(),
+	name: varchar({ length: 255 }).notNull(),
+	description: text(),
+	type: varchar({ length: 20 }).notNull(),
+	timeConfig: text("time_config"),
+	behaviorConfig: text("behavior_config"),
+	weatherConfig: text("weather_config"),
+	action: varchar({ length: 30 }).notNull(),
+	actionConfig: text("action_config"),
+	targetFilter: text("target_filter"),
+	isActive: integer("is_active").default(1).notNull(),
+	executionCount: integer("execution_count").default(0).notNull(),
+	lastExecutedAt: timestamp("last_executed_at", { mode: 'string' }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	check("triggers_id_not_null", sql`NOT NULL id`),
+	check("triggers_name_not_null", sql`NOT NULL name`),
+	check("triggers_type_not_null", sql`NOT NULL type`),
+	check("triggers_action_not_null", sql`NOT NULL action`),
+	check("triggers_is_active_not_null", sql`NOT NULL is_active`),
+	check("triggers_execution_count_not_null", sql`NOT NULL execution_count`),
+	check("triggers_created_at_not_null", sql`NOT NULL created_at`),
+	check("triggers_updated_at_not_null", sql`NOT NULL updated_at`),
+]);
+
+export const messages = pgTable("messages", {
+	id: serial().primaryKey().notNull(),
+	conversationId: integer("conversation_id").notNull(),
+	role: varchar({ length: 20 }).notNull(),
+	content: text().notNull(),
+	knowledgeUsed: text("knowledge_used"),
+	extractedInfo: text("extracted_info"),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	check("messages_id_not_null", sql`NOT NULL id`),
+	check("messages_conversation_id_not_null", sql`NOT NULL conversation_id`),
+	check("messages_role_not_null", sql`NOT NULL role`),
+	check("messages_content_not_null", sql`NOT NULL content`),
+	check("messages_created_at_not_null", sql`NOT NULL created_at`),
+]);
+
+export const users = pgTable("users", {
+	id: serial().primaryKey().notNull(),
+	openId: varchar({ length: 64 }).notNull(),
+	name: text(),
+	email: varchar({ length: 320 }),
+	loginMethod: varchar({ length: 64 }),
+	role: varchar({ length: 20 }).default('user').notNull(),
+	createdAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().notNull(),
+	lastSignedIn: timestamp({ mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	unique("users_openId_key").on(table.openId),
+	check("users_id_not_null", sql`NOT NULL id`),
+	check("users_openId_not_null", sql`NOT NULL "openId"`),
+	check("users_role_not_null", sql`NOT NULL role`),
+	check("users_createdAt_not_null", sql`NOT NULL "createdAt"`),
+	check("users_updatedAt_not_null", sql`NOT NULL "updatedAt"`),
+	check("users_lastSignedIn_not_null", sql`NOT NULL "lastSignedIn"`),
+]);
+
+export const weworkConfig = pgTable("wework_config", {
+	id: serial().primaryKey().notNull(),
+	corpId: varchar("corp_id", { length: 100 }),
+	corpSecret: varchar("corp_secret", { length: 200 }),
+	agentId: integer("agent_id"),
+	token: varchar({ length: 100 }),
+	encodingAesKey: varchar("encoding_aes_key", { length: 200 }),
+	accessToken: text("access_token"),
+	tokenExpiresAt: timestamp("token_expires_at", { mode: 'string' }),
+	isActive: integer("is_active").default(1).notNull(),
+	isMockMode: integer("is_mock_mode").default(1).notNull(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	check("wework_config_id_not_null", sql`NOT NULL id`),
+	check("wework_config_is_active_not_null", sql`NOT NULL is_active`),
+	check("wework_config_is_mock_mode_not_null", sql`NOT NULL is_mock_mode`),
+	check("wework_config_created_at_not_null", sql`NOT NULL created_at`),
+	check("wework_config_updated_at_not_null", sql`NOT NULL updated_at`),
+]);
+
+export const xiaohongshuComments = pgTable("xiaohongshu_comments", {
+	id: serial().primaryKey().notNull(),
+	postId: integer("post_id").notNull(),
+	authorName: varchar("author_name", { length: 100 }).notNull(),
+	authorAvatar: varchar("author_avatar", { length: 500 }),
+	content: text().notNull(),
+	replyContent: text("reply_content"),
+	replyStatus: varchar("reply_status", { length: 20 }).default('pending').notNull(),
+	sentiment: varchar({ length: 20 }),
+	isFiltered: integer("is_filtered").default(0).notNull(),
+	commentedAt: timestamp("commented_at", { mode: 'string' }).notNull(),
+	repliedAt: timestamp("replied_at", { mode: 'string' }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	check("xiaohongshu_comments_id_not_null", sql`NOT NULL id`),
+	check("xiaohongshu_comments_post_id_not_null", sql`NOT NULL post_id`),
+	check("xiaohongshu_comments_author_name_not_null", sql`NOT NULL author_name`),
+	check("xiaohongshu_comments_content_not_null", sql`NOT NULL content`),
+	check("xiaohongshu_comments_reply_status_not_null", sql`NOT NULL reply_status`),
+	check("xiaohongshu_comments_is_filtered_not_null", sql`NOT NULL is_filtered`),
+	check("xiaohongshu_comments_commented_at_not_null", sql`NOT NULL commented_at`),
+	check("xiaohongshu_comments_created_at_not_null", sql`NOT NULL created_at`),
+]);
+
+export const userLearningProgress = pgTable("user_learning_progress", {
+	id: serial().primaryKey().notNull(),
+	userId: integer("user_id").notNull(),
+	contentId: integer("content_id").notNull(),
+	status: varchar({ length: 20 }).default('started').notNull(),
+	timeSpent: integer("time_spent").default(0),
+	rating: integer(),
+	feedback: text(),
+	startedAt: timestamp("started_at", { mode: 'string' }).defaultNow(),
+	completedAt: timestamp("completed_at", { mode: 'string' }),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	index("idx_user_learning_progress_content_id").using("btree", table.contentId.asc().nullsLast().op("int4_ops")),
+	index("idx_user_learning_progress_status").using("btree", table.status.asc().nullsLast().op("text_ops")),
+	index("idx_user_learning_progress_user_id").using("btree", table.userId.asc().nullsLast().op("int4_ops")),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "user_learning_progress_user_id_fkey"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.contentId],
+			foreignColumns: [knowledgeBase.id],
+			name: "user_learning_progress_content_id_fkey"
+		}).onDelete("cascade"),
+	unique("user_learning_progress_user_id_content_id_key").on(table.userId, table.contentId),
+	check("user_learning_progress_status_check", sql`(status)::text = ANY ((ARRAY['started'::character varying, 'in_progress'::character varying, 'completed'::character varying, 'skipped'::character varying])::text[])`),
+	check("user_learning_progress_rating_check", sql`(rating >= 1) AND (rating <= 5)`),
+	check("user_learning_progress_id_not_null", sql`NOT NULL id`),
+	check("user_learning_progress_user_id_not_null", sql`NOT NULL user_id`),
+	check("user_learning_progress_content_id_not_null", sql`NOT NULL content_id`),
+	check("user_learning_progress_status_not_null", sql`NOT NULL status`),
+]);
+
+export const expertReviews = pgTable("expert_reviews", {
+	id: serial().primaryKey().notNull(),
+	contentId: integer("content_id").notNull(),
+	expertId: varchar("expert_id", { length: 100 }).notNull(),
+	expertName: varchar("expert_name", { length: 200 }).notNull(),
+	credentials: text(),
+	reviewDate: timestamp("review_date", { mode: 'string' }).defaultNow(),
+	overallRating: integer("overall_rating").notNull(),
+	comments: text(),
+	recommendations: text().array(),
+	approved: boolean().default(false),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	index("idx_expert_reviews_approved").using("btree", table.approved.asc().nullsLast().op("bool_ops")),
+	index("idx_expert_reviews_content_id").using("btree", table.contentId.asc().nullsLast().op("int4_ops")),
+	index("idx_expert_reviews_expert_id").using("btree", table.expertId.asc().nullsLast().op("text_ops")),
+	foreignKey({
+			columns: [table.contentId],
+			foreignColumns: [knowledgeBase.id],
+			name: "expert_reviews_content_id_fkey"
+		}).onDelete("cascade"),
+	check("expert_reviews_overall_rating_check", sql`(overall_rating >= 1) AND (overall_rating <= 10)`),
+	check("expert_reviews_id_not_null", sql`NOT NULL id`),
+	check("expert_reviews_content_id_not_null", sql`NOT NULL content_id`),
+	check("expert_reviews_expert_id_not_null", sql`NOT NULL expert_id`),
+	check("expert_reviews_expert_name_not_null", sql`NOT NULL expert_name`),
+	check("expert_reviews_overall_rating_not_null", sql`NOT NULL overall_rating`),
+]);
+
+export const contentQualityMetrics = pgTable("content_quality_metrics", {
+	id: serial().primaryKey().notNull(),
+	contentId: integer("content_id").notNull(),
+	completenessScore: numeric("completeness_score", { precision: 3, scale:  2 }).default('0.00'),
+	reliabilityScore: numeric("reliability_score", { precision: 3, scale:  2 }).default('0.00'),
+	credibilityScore: numeric("credibility_score", { precision: 3, scale:  2 }).default('0.00'),
+	richnessScore: numeric("richness_score", { precision: 3, scale:  2 }).default('0.00'),
+	engagementScore: numeric("engagement_score", { precision: 3, scale:  2 }).default('0.00'),
+	overallScore: numeric("overall_score", { precision: 3, scale:  2 }).default('0.00'),
+	issues: jsonb().default([]),
+	recommendations: jsonb().default([]),
+	status: varchar({ length: 20 }).default('pending'),
+	reviewedBy: varchar("reviewed_by", { length: 100 }),
+	reviewedAt: timestamp("reviewed_at", { mode: 'string' }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	index("idx_content_quality_metrics_content_id").using("btree", table.contentId.asc().nullsLast().op("int4_ops")),
+	index("idx_content_quality_metrics_overall_score").using("btree", table.overallScore.asc().nullsLast().op("numeric_ops")),
+	index("idx_content_quality_metrics_status").using("btree", table.status.asc().nullsLast().op("text_ops")),
+	foreignKey({
+			columns: [table.contentId],
+			foreignColumns: [knowledgeBase.id],
+			name: "content_quality_metrics_content_id_fkey"
+		}).onDelete("cascade"),
+	unique("content_quality_metrics_content_id_key").on(table.contentId),
+	check("content_quality_metrics_completeness_score_check", sql`(completeness_score >= (0)::numeric) AND (completeness_score <= (1)::numeric)`),
+	check("content_quality_metrics_reliability_score_check", sql`(reliability_score >= (0)::numeric) AND (reliability_score <= (1)::numeric)`),
+	check("content_quality_metrics_credibility_score_check", sql`(credibility_score >= (0)::numeric) AND (credibility_score <= (1)::numeric)`),
+	check("content_quality_metrics_richness_score_check", sql`(richness_score >= (0)::numeric) AND (richness_score <= (1)::numeric)`),
+	check("content_quality_metrics_engagement_score_check", sql`(engagement_score >= (0)::numeric) AND (engagement_score <= (1)::numeric)`),
+	check("content_quality_metrics_overall_score_check", sql`(overall_score >= (0)::numeric) AND (overall_score <= (1)::numeric)`),
+	check("content_quality_metrics_status_check", sql`(status)::text = ANY ((ARRAY['pending'::character varying, 'approved'::character varying, 'rejected'::character varying, 'needs_revision'::character varying])::text[])`),
+	check("content_quality_metrics_id_not_null", sql`NOT NULL id`),
+	check("content_quality_metrics_content_id_not_null", sql`NOT NULL content_id`),
+]);
+
+export const userLearningPreferences = pgTable("user_learning_preferences", {
+	id: serial().primaryKey().notNull(),
+	userId: integer("user_id").notNull(),
+	preferredDifficulty: varchar("preferred_difficulty", { length: 20 }).default('beginner'),
+	preferredContentTypes: text("preferred_content_types").array(),
+	learningGoals: text("learning_goals").array(),
+	timePreference: varchar("time_preference", { length: 20 }).default('medium'),
+	interests: text().array(),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	index("idx_user_learning_preferences_user_id").using("btree", table.userId.asc().nullsLast().op("int4_ops")),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "user_learning_preferences_user_id_fkey"
+		}).onDelete("cascade"),
+	unique("user_learning_preferences_user_id_key").on(table.userId),
+	check("user_learning_preferences_preferred_difficulty_check", sql`(preferred_difficulty)::text = ANY ((ARRAY['beginner'::character varying, 'intermediate'::character varying, 'advanced'::character varying])::text[])`),
+	check("user_learning_preferences_time_preference_check", sql`(time_preference)::text = ANY ((ARRAY['short'::character varying, 'medium'::character varying, 'long'::character varying])::text[])`),
+	check("user_learning_preferences_id_not_null", sql`NOT NULL id`),
+	check("user_learning_preferences_user_id_not_null", sql`NOT NULL user_id`),
+]);
+
+export const learningAnalytics = pgTable("learning_analytics", {
+	id: serial().primaryKey().notNull(),
+	userId: integer("user_id").notNull(),
+	eventType: varchar("event_type", { length: 50 }).notNull(),
+	contentId: integer("content_id"),
+	sessionId: varchar("session_id", { length: 100 }),
+	metadata: jsonb().default({}),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	index("idx_learning_analytics_content_id").using("btree", table.contentId.asc().nullsLast().op("int4_ops")),
+	index("idx_learning_analytics_created_at").using("btree", table.createdAt.asc().nullsLast().op("timestamp_ops")),
+	index("idx_learning_analytics_event_type").using("btree", table.eventType.asc().nullsLast().op("text_ops")),
+	index("idx_learning_analytics_user_id").using("btree", table.userId.asc().nullsLast().op("int4_ops")),
+	foreignKey({
+			columns: [table.userId],
+			foreignColumns: [users.id],
+			name: "learning_analytics_user_id_fkey"
+		}).onDelete("cascade"),
+	foreignKey({
+			columns: [table.contentId],
+			foreignColumns: [knowledgeBase.id],
+			name: "learning_analytics_content_id_fkey"
+		}).onDelete("set null"),
+	check("learning_analytics_id_not_null", sql`NOT NULL id`),
+	check("learning_analytics_user_id_not_null", sql`NOT NULL user_id`),
+	check("learning_analytics_event_type_not_null", sql`NOT NULL event_type`),
+]);
+
+export const websiteContent = pgTable("website_content", {
+  id: serial("id").primaryKey(),
+  pageKey: varchar("page_key", { length: 100 }).notNull(),
+  sectionKey: varchar("section_key", { length: 100 }),
+  contentType: varchar("content_type", { length: 50 }).notNull(),
+  title: varchar("title", { length: 255 }),
   content: text("content").notNull(),
-  category: varchar("category", { length: 100 }).notNull(), // 项目介绍/FAQ/注意事项/价格政策/销售话术/心理分析/异议处理
-  tags: text("tags"), // JSON 数组，如 ["超皮秒", "祛斑", "激光"]
-  embedding: text("embedding"), // 向量嵌入，JSON 格式
-  viewCount: int("view_count").default(0).notNull(),
-  usedCount: int("used_count").default(0).notNull(), // AI 引用次数
-  isActive: int("is_active").default(1).notNull(), // 1=active, 0=inactive
+  imageUrl: text("image_url"),
+  linkUrl: text("link_url"),
+  linkText: varchar("link_text", { length: 255 }),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  isActive: integer("is_active").default(1).notNull(),
+  metadata: text("metadata"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().$onUpdateFn(() => new Date()).notNull(),
 });
 
-export type KnowledgeBase = typeof knowledgeBase.$inferSelect;
-export type InsertKnowledgeBase = typeof knowledgeBase.$inferInsert;
-
-/**
- * 对话历史表 - 记录 AI 客服对话
- */
-export const conversations = mysqlTable("conversations", {
-  id: int("id").autoincrement().primaryKey(),
-  sessionId: varchar("session_id", { length: 64 }).notNull().unique(), // 会话 ID
-  visitorName: varchar("visitor_name", { length: 100 }),
-  visitorPhone: varchar("visitor_phone", { length: 20 }),
-  visitorWechat: varchar("visitor_wechat", { length: 100 }),
-  source: varchar("source", { length: 50 }).default("web").notNull(), // web/wechat/enterprise_wechat
-  status: mysqlEnum("status", ["active", "converted", "closed"]).default("active").notNull(),
-  leadId: varchar("lead_id", { length: 100 }), // 关联的 Airtable 线索 ID
-  // 客户画像字段
-  psychologyType: mysqlEnum("psychology_type", ["恐惧型", "贪婪型", "安全型", "敏感型"]), // 心理类型
-  psychologyTags: text("psychology_tags"), // JSON 数组，存储心理标签
-  budgetLevel: mysqlEnum("budget_level", ["低", "中", "高"]), // 消费能力
-  customerTier: mysqlEnum("customer_tier", ["A", "B", "C", "D"]), // 客户分层
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
-});
-
-export type Conversation = typeof conversations.$inferSelect;
-export type InsertConversation = typeof conversations.$inferInsert;
-
-/**
- * 消息记录表 - 存储对话中的每条消息
- */
-export const messages = mysqlTable("messages", {
-  id: int("id").autoincrement().primaryKey(),
-  conversationId: int("conversation_id").notNull(),
-  role: mysqlEnum("role", ["user", "assistant", "system"]).notNull(),
-  content: text("content").notNull(),
-  knowledgeUsed: text("knowledge_used"), // 使用的知识库 ID 列表，JSON 格式
-  extractedInfo: text("extracted_info"), // 提取的客户信息，JSON 格式
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export type Message = typeof messages.$inferSelect;
-export type InsertMessage = typeof messages.$inferInsert;
-
-/**
- * 线索记录表 - 本地备份 Airtable 线索数据
- */
-export const leads = mysqlTable("leads", {
-  id: int("id").autoincrement().primaryKey(),
-  airtableId: varchar("airtable_id", { length: 100 }).unique(), // Airtable 记录 ID
-  name: varchar("name", { length: 100 }).notNull(),
-  phone: varchar("phone", { length: 20 }).notNull(),
-  wechat: varchar("wechat", { length: 100 }),
-  age: int("age"), // 年龄
-  interestedServices: text("interested_services"), // JSON 数组
-  budget: varchar("budget", { length: 50 }),
-  budgetLevel: mysqlEnum("budget_level", ["低", "中", "高"]), // 消费能力
-  message: text("message"),
-  source: varchar("source", { length: 50 }).notNull(), // 来源渠道
-  sourceContent: varchar("source_content", { length: 255 }), // 来源内容
-  status: varchar("status", { length: 50 }).default("new").notNull(), // new/contacted/interested/quoted/converted
-  psychologyType: varchar("psychology_type", { length: 50 }), // 心理类型：恐惧型/贪婪型/安全型/敏感型
-  psychologyTags: text("psychology_tags"), // 心理标签，JSON 数组
-  customerTier: mysqlEnum("customer_tier", ["A", "B", "C", "D"]), // 客户分层：A=高价值 B=中价值 C=低价值 D=无效
-  notes: text("notes"), // 备注
-  followUpDate: timestamp("follow_up_date"), // 下次跟进日期
-  conversationId: int("conversation_id"), // 关联的对话 ID
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
-  syncedAt: timestamp("synced_at"), // 同步到 Airtable 的时间
-});
-
-export type Lead = typeof leads.$inferSelect;
-export type InsertLead = typeof leads.$inferInsert;
-
-/**
- * 触发器表 - 存储自动化营销触发规则
- */
-export const triggers = mysqlTable("triggers", {
-  id: int("id").autoincrement().primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(), // 触发器名称
-  description: text("description"), // 描述
-  type: mysqlEnum("type", ["time", "behavior", "weather"]).notNull(), // 触发类型
-  // 时间触发配置
-  timeConfig: text("time_config"), // JSON: { type: "birthday|holiday|reminder", date: "2024-01-01", time: "10:00", repeat: "yearly|monthly|once" }
-  // 行为触发配置
-  behaviorConfig: text("behavior_config"), // JSON: { event: "browse_no_consult|consult_no_book|book_no_show", duration: 24, unit: "hours" }
-  // 天气触发配置
-  weatherConfig: text("weather_config"), // JSON: { condition: "sunny|rainy|hot|cold", temperature: { min: 25, max: 35 }, projects: ["防晒", "补水"] }
-  // 触发动作
-  action: mysqlEnum("action", ["send_message", "send_email", "create_task", "notify_staff"]).notNull(),
-  actionConfig: text("action_config"), // JSON: { template: "xxx", content: "xxx", channel: "wechat|sms|email" }
-  // 目标客户筛选
-  targetFilter: text("target_filter"), // JSON: { customerTier: ["A", "B"], psychologyType: ["恐惧型"], source: ["小红书"] }
-  isActive: int("is_active").default(1).notNull(), // 1=active, 0=inactive
-  executionCount: int("execution_count").default(0).notNull(), // 执行次数
-  lastExecutedAt: timestamp("last_executed_at"), // 最后执行时间
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
-});
-
-export type Trigger = typeof triggers.$inferSelect;
-export type InsertTrigger = typeof triggers.$inferInsert;
-
-/**
- * 触发器执行记录表 - 记录每次触发的执行情况
- */
-export const triggerExecutions = mysqlTable("trigger_executions", {
-  id: int("id").autoincrement().primaryKey(),
-  triggerId: int("trigger_id").notNull(), // 关联触发器 ID
-  leadId: int("lead_id"), // 关联线索 ID
-  executedAt: timestamp("executed_at").defaultNow().notNull(),
-  status: mysqlEnum("status", ["success", "failed", "skipped"]).notNull(),
-  result: text("result"), // 执行结果详情
-  errorMessage: text("error_message"), // 错误信息
-});
-
-export type TriggerExecution = typeof triggerExecutions.$inferSelect;
-export type InsertTriggerExecution = typeof triggerExecutions.$inferInsert;
-
-/**
- * 小红书内容表 - 存储小红书发布的内容及数据
- */
-export const xiaohongshuPosts = mysqlTable("xiaohongshu_posts", {
-  id: int("id").autoincrement().primaryKey(),
-  title: varchar("title", { length: 255 }).notNull(),
-  content: text("content").notNull(),
-  images: text("images"), // JSON 数组，存储图片 URL
-  tags: text("tags"), // JSON 数组，存储话题标签
-  contentType: varchar("content_type", { length: 50 }).notNull(), // 项目体验/效果对比/价格揭秘/避坑指南/节日营销
-  project: varchar("project", { length: 100 }), // 关联项目
-  status: mysqlEnum("status", ["draft", "scheduled", "published", "deleted"]).default("draft").notNull(),
-  publishedAt: timestamp("published_at"), // 发布时间
-  scheduledAt: timestamp("scheduled_at"), // 计划发布时间
-  // 数据监控
-  viewCount: int("view_count").default(0).notNull(), // 阅读量
-  likeCount: int("like_count").default(0).notNull(), // 点赞数
-  commentCount: int("comment_count").default(0).notNull(), // 评论数
-  shareCount: int("share_count").default(0).notNull(), // 转发数
-  collectCount: int("collect_count").default(0).notNull(), // 收藏数
-  lastSyncedAt: timestamp("last_synced_at"), // 最后同步数据时间
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
-});
-
-export type XiaohongshuPost = typeof xiaohongshuPosts.$inferSelect;
-export type InsertXiaohongshuPost = typeof xiaohongshuPosts.$inferInsert;
-
-/**
- * 小红书评论表 - 存储小红书内容的评论
- */
-export const xiaohongshuComments = mysqlTable("xiaohongshu_comments", {
-  id: int("id").autoincrement().primaryKey(),
-  postId: int("post_id").notNull(), // 关联内容 ID
-  authorName: varchar("author_name", { length: 100 }).notNull(), // 评论者昵称
-  authorAvatar: varchar("author_avatar", { length: 500 }), // 评论者头像
-  content: text("content").notNull(), // 评论内容
-  replyContent: text("reply_content"), // 回复内容
-  replyStatus: mysqlEnum("reply_status", ["pending", "replied", "ignored"]).default("pending").notNull(),
-  sentiment: mysqlEnum("sentiment", ["positive", "neutral", "negative"]), // 情感分析
-  isFiltered: int("is_filtered").default(0).notNull(), // 是否被敏感词过滤
-  commentedAt: timestamp("commented_at").notNull(), // 评论时间
-  repliedAt: timestamp("replied_at"), // 回复时间
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export type XiaohongshuComment = typeof xiaohongshuComments.$inferSelect;
-export type InsertXiaohongshuComment = typeof xiaohongshuComments.$inferInsert;
-
-/**
- * 企业微信配置表 - 存储企业微信应用配置
- */
-export const weworkConfig = mysqlTable("wework_config", {
-  id: int("id").autoincrement().primaryKey(),
-  corpId: varchar("corp_id", { length: 100 }), // 企业 ID
-  corpSecret: varchar("corp_secret", { length: 200 }), // 应用 Secret
-  agentId: int("agent_id"), // 应用 AgentID
-  token: varchar("token", { length: 100 }), // 回调 Token
-  encodingAesKey: varchar("encoding_aes_key", { length: 200 }), // 回调加密密钥
-  accessToken: text("access_token"), // Access Token（缓存）
-  tokenExpiresAt: timestamp("token_expires_at"), // Token 过期时间
-  isActive: int("is_active").default(1).notNull(), // 1=启用, 0=禁用
-  isMockMode: int("is_mock_mode").default(1).notNull(), // 1=模拟模式, 0=真实模式
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
-});
-
-export type WeworkConfig = typeof weworkConfig.$inferSelect;
-export type InsertWeworkConfig = typeof weworkConfig.$inferInsert;
-
-/**
- * 企业微信"联系我"配置表 - 存储生成的二维码配置
- */
-export const weworkContactWay = mysqlTable("wework_contact_way", {
-  id: int("id").autoincrement().primaryKey(),
-  configId: varchar("config_id", { length: 100 }).notNull().unique(), // 企业微信返回的配置 ID
-  type: mysqlEnum("type", ["single", "multi"]).default("single").notNull(), // single=单人, multi=多人
-  scene: mysqlEnum("scene", ["1", "2"]).default("1").notNull(), // 1=在小程序中联系, 2=通过二维码联系
-  qrCode: text("qr_code"), // 二维码 URL
-  remark: varchar("remark", { length: 255 }), // 备注说明
-  skipVerify: int("skip_verify").default(1).notNull(), // 1=自动添加, 0=需要验证
-  state: varchar("state", { length: 100 }), // 自定义状态（用于追踪来源）
-  userIds: text("user_ids"), // JSON 数组，企业成员 UserID 列表
-  isActive: int("is_active").default(1).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
-});
-
-export type WeworkContactWay = typeof weworkContactWay.$inferSelect;
-export type InsertWeworkContactWay = typeof weworkContactWay.$inferInsert;
-
-/**
- * 企业微信客户表 - 存储通过企业微信添加的客户
- */
-export const weworkCustomers = mysqlTable("wework_customers", {
-  id: int("id").autoincrement().primaryKey(),
-  externalUserId: varchar("external_user_id", { length: 100 }).notNull().unique(), // 企业微信外部联系人 ID
-  name: varchar("name", { length: 100 }),
-  avatar: text("avatar"), // 头像 URL
-  type: mysqlEnum("type", ["1", "2"]).default("1").notNull(), // 1=微信用户, 2=企业微信用户
-  gender: mysqlEnum("gender", ["0", "1", "2"]).default("0").notNull(), // 0=未知, 1=男, 2=女
-  unionId: varchar("union_id", { length: 100 }), // 微信 UnionID
-  position: varchar("position", { length: 100 }), // 职位
-  corpName: varchar("corp_name", { length: 200 }), // 企业名称
-  corpFullName: varchar("corp_full_name", { length: 200 }), // 企业全称
-  externalProfile: text("external_profile"), // JSON 格式，外部联系人详细信息
-  followUserId: varchar("follow_user_id", { length: 100 }), // 添加该客户的企业成员 UserID
-  remark: varchar("remark", { length: 255 }), // 备注
-  description: text("description"), // 描述
-  createTime: timestamp("create_time"), // 添加时间（企业微信）
-  tags: text("tags"), // JSON 数组，标签列表
-  state: varchar("state", { length: 100 }), // 来源（对应"联系我"的 state）
-  conversationId: int("conversation_id"), // 关联的对话 ID
-  leadId: varchar("lead_id", { length: 100 }), // 关联的 Airtable 线索 ID
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().onUpdateNow().notNull(),
-});
-
-export type WeworkCustomer = typeof weworkCustomers.$inferSelect;
-export type InsertWeworkCustomer = typeof weworkCustomers.$inferInsert;
-
-/**
- * 企业微信消息记录表 - 存储发送的消息
- */
-export const weworkMessages = mysqlTable("wework_messages", {
-  id: int("id").autoincrement().primaryKey(),
-  externalUserId: varchar("external_user_id", { length: 100 }).notNull(), // 接收消息的客户 ID
-  sendUserId: varchar("send_user_id", { length: 100 }).notNull(), // 发送消息的企业成员 UserID
-  msgType: varchar("msg_type", { length: 20 }).notNull(), // text/image/link/miniprogram
-  content: text("content").notNull(), // 消息内容（JSON 格式）
-  status: mysqlEnum("status", ["pending", "sent", "failed"]).default("pending").notNull(),
-  errorMsg: text("error_msg"), // 错误信息
-  sentAt: timestamp("sent_at"), // 发送时间
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export type WeworkMessage = typeof weworkMessages.$inferSelect;
-export type InsertWeworkMessage = typeof weworkMessages.$inferInsert;
+export type WebsiteContent = typeof websiteContent.$inferSelect;
+export type InsertWebsiteContent = typeof websiteContent.$inferInsert;

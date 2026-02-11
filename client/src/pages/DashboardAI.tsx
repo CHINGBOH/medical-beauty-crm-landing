@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Loader2, Send, Sparkles, Database, TrendingUp, Users } from "lucide-react";
+import DashboardLayout from "@/components/DashboardLayout";
 
 export default function DashboardAI() {
   const [question, setQuestion] = useState("");
@@ -56,7 +57,8 @@ export default function DashboardAI() {
   ];
 
   return (
-    <div className="container mx-auto p-6 max-w-5xl">
+    <DashboardLayout>
+      <div className="container mx-auto p-6 max-w-5xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
           <Sparkles className="w-8 h-8 text-amber-600" />
@@ -177,6 +179,7 @@ export default function DashboardAI() {
           </ul>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </DashboardLayout>
   );
 }

@@ -186,6 +186,8 @@ export async function setupAirtableCRM(config: AirtableConfig) {
     }
 
     // TODO: 可以继续添加其他表的创建逻辑
+    // 当前已实现：线索表（Leads）
+    // 计划添加：客户表（Customers）、跟进记录表（Followups）等
     // - 客户库
     // - 预约管理
     // - 订单管理

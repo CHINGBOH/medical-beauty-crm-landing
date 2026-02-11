@@ -33,8 +33,8 @@ export async function saveWeworkConfig(data: {
       .where(eq(weworkConfig.id, existing.id));
     return { ...existing, ...data };
   } else {
-    const result = await db.insert(weworkConfig).values(data);
-    return { id: Number((result as any).insertId), ...data };
+    const result = await db.insert(weworkConfig).values(data).returning({ id: weworkConfig.id });
+    return { id: result[0]?.id || 0, ...data };
   }
 }
 
@@ -64,8 +64,8 @@ export async function createContactWay(data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(weworkContactWay).values(data);
-  return { id: Number((result as any).insertId), ...data };
+  const result = await db.insert(weworkContactWay).values(data).returning({ id: weworkContactWay.id });
+  return { id: result[0]?.id || 0, ...data };
 }
 
 export async function getContactWay(configId: string) {
@@ -116,8 +116,8 @@ export async function createWeworkCustomer(data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(weworkCustomers).values(data);
-  return { id: Number((result as any).insertId), ...data };
+  const result = await db.insert(weworkCustomers).values(data).returning({ id: weworkCustomers.id });
+  return { id: result[0]?.id || 0, ...data };
 }
 
 export async function getWeworkCustomer(externalUserId: string) {
@@ -154,8 +154,8 @@ export async function createWeworkMessage(data: {
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const result = await db.insert(weworkMessages).values(data);
-  return { id: Number((result as any).insertId), ...data };
+  const result = await db.insert(weworkMessages).values(data).returning({ id: weworkMessages.id });
+  return { id: result[0]?.id || 0, ...data };
 }
 
 export async function updateMessageStatus(id: number, status: "sent" | "failed", errorMsg?: string) {

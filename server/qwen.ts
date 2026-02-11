@@ -1,7 +1,7 @@
 import axios from "axios";
 
-const QWEN_API_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
-const QWEN_API_KEY = process.env.QWEN_API_KEY || "";
+const QWEN_API_URL = process.env.QWEN_API_URL || process.env.BUILT_IN_FORGE_API_URL || "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+const QWEN_API_KEY = process.env.QWEN_API_KEY || process.env.BUILT_IN_FORGE_API_KEY || "";
 
 export interface QwenMessage {
   role: "system" | "user" | "assistant";
@@ -56,10 +56,18 @@ export async function callQwen(messages: QwenMessage[]): Promise<string> {
     }
 
     return content;
-  } catch (error: any) {
-    console.error("[Qwen API Error]", error.response?.data || error.message);
+  } catch (error: unknown) {
+    const { logger } = await import("./_core/logger");
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const axiosError = error as { response?: { data?: { error?: { message?: string } } } };
+    
+    logger.error("[Qwen API Error]", {
+      message: errorMessage,
+      responseData: axiosError.response?.data,
+    });
+    
     throw new Error(
-      `Qwen API call failed: ${error.response?.data?.error?.message || error.message}`
+      `Qwen API call failed: ${axiosError.response?.data?.error?.message || errorMessage}`
     );
   }
 }
@@ -67,7 +75,17 @@ export async function callQwen(messages: QwenMessage[]): Promise<string> {
 /**
  * 分析线索数据，生成转化率报告
  */
-export async function analyzeLeadsData(leadsData: any[]): Promise<string> {
+export interface LeadData {
+  id?: number;
+  name?: string;
+  phone?: string;
+  source?: string;
+  interestedServices?: string[];
+  budget?: string;
+  [key: string]: unknown;
+}
+
+export async function analyzeLeadsData(leadsData: LeadData[]): Promise<string> {
   const prompt = `你是一个专业的医美行业数据分析师。请分析以下线索数据，生成一份详细的转化率报告。
 
 线索数据（JSON格式）：
@@ -97,9 +115,18 @@ ${JSON.stringify(leadsData, null, 2)}
 /**
  * 基于对话历史生成客户画像
  */
+export interface LeadInfo {
+  name?: string;
+  phone?: string;
+  wechat?: string;
+  interestedServices?: string[];
+  budget?: string;
+  [key: string]: unknown;
+}
+
 export async function generateCustomerProfile(
   conversationHistory: string,
-  leadInfo: any
+  leadInfo: LeadInfo
 ): Promise<string> {
   const prompt = `你是一个专业的医美客户画像分析师。请根据以下信息生成详细的客户画像。
 
@@ -133,9 +160,16 @@ ${JSON.stringify(leadInfo, null, 2)}
 /**
  * 生成营销建议
  */
+export interface PerformanceData {
+  totalLeads?: number;
+  conversionRate?: number;
+  revenue?: number;
+  [key: string]: unknown;
+}
+
 export async function generateMarketingSuggestions(
-  leadsData: any[],
-  performanceData: any
+  leadsData: LeadData[],
+  performanceData: PerformanceData
 ): Promise<string> {
   const prompt = `你是一个医美行业营销专家。请根据以下数据生成营销优化建议。
 

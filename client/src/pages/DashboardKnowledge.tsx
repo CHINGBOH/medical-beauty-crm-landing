@@ -150,7 +150,7 @@ export default function DashboardKnowledge() {
           <div>
             <h1 className="text-3xl font-bold tracking-tight">知识库管理</h1>
             <p className="text-muted-foreground mt-2">
-              管理客户问询知识库和内部管理知识库
+              维护AI客服知识库，提升回答准确性和专业性
             </p>
           </div>
           <Button onClick={handleCreate}>
@@ -163,7 +163,7 @@ export default function DashboardKnowledge() {
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="customer" className="flex items-center gap-2">
               <BookOpen className="w-4 h-4" />
-              客户问询知识库
+              客户咨询知识库
             </TabsTrigger>
             <TabsTrigger value="internal" className="flex items-center gap-2">
               <Lock className="w-4 h-4" />
@@ -241,7 +241,7 @@ export default function DashboardKnowledge() {
               ) : (
                 <Card>
                   <CardContent className="py-12 text-center text-muted-foreground">
-                    {searchTerm ? "未找到匹配的知识库" : "暂无客户问询知识库"}
+                    {searchTerm ? "未找到匹配的知识库" : "暂无客户咨询知识库，开始添加知识库内容吧"}
                   </CardContent>
                 </Card>
               )}
@@ -320,7 +320,7 @@ export default function DashboardKnowledge() {
               <DialogTitle>{editingId ? "编辑知识库" : "新建知识库"}</DialogTitle>
               <DialogDescription>
                 {activeTab === "customer"
-                  ? "客户问询知识库用于 AI 客服回答客户问题"
+                  ? "客户咨询知识库用于 AI 客服回答客户问题"
                   : "内部管理知识库用于销售人员参考，不对外展示"}
               </DialogDescription>
             </DialogHeader>

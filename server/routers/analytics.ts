@@ -1,4 +1,4 @@
-import { router, protectedProcedure } from "../_core/trpc";
+import { router, publicProcedure } from "../_core/trpc";
 import { z } from "zod";
 import { analyzeLeadsData, generateCustomerProfile, generateMarketingSuggestions } from "../qwen";
 import { getDb } from "../db";
@@ -9,7 +9,7 @@ export const analyticsRouter = router({
   /**
    * 生成线索数据分析报告
    */
-  generateLeadsReport: protectedProcedure.mutation(async () => {
+  generateLeadsReport: publicProcedure.mutation(async () => {
     const db = await getDb();
     if (!db) {
       throw new Error("Database not available");
@@ -46,7 +46,7 @@ export const analyticsRouter = router({
   /**
    * 生成客户画像
    */
-  generateCustomerProfile: protectedProcedure
+  generateCustomerProfile: publicProcedure
     .input(
       z.object({
         leadId: z.number(),
@@ -119,7 +119,7 @@ export const analyticsRouter = router({
   /**
    * 生成营销建议
    */
-  generateMarketingSuggestions: protectedProcedure.mutation(async () => {
+  generateMarketingSuggestions: publicProcedure.mutation(async () => {
     const db = await getDb();
     if (!db) {
       throw new Error("Database not available");
@@ -181,7 +181,7 @@ export const analyticsRouter = router({
   /**
    * 获取数据统计概览
    */
-  getOverview: protectedProcedure.query(async () => {
+  getOverview: publicProcedure.query(async () => {
     const db = await getDb();
     if (!db) {
       throw new Error("Database not available");
